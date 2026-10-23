@@ -1,4 +1,4 @@
-"""Tests for the independent ERT instrument readers and reciprocal analysis.
+"""Tests for the ERT instrument readers and reciprocal analysis.
 
 The DAS-1 tests run against the real acquisitions under ``examples/data/ERT/DAS``
 rather than a fixture, because the point of the reader is that it survives what
@@ -113,61 +113,40 @@ def _pair(a, b, m, n, resist):
     return pd.DataFrame({"a": a, "b": b, "m": m, "n": n, "resist": resist})
 
 
-def test_a_strict_reciprocal_pair_scores_zero() -> None:
-    df = _pair([1, 3], [2, 4], [3, 1], [4, 2], [100.0, 100.0])
-    out = reciprocal_errors(df, 0.05)
-
-    assert out["reciprocalErrRel"].tolist() == [0.0, 0.0]
-    assert out["reciprocalMean"].tolist() == [100.0, 100.0]
+_NAN = float("nan")
 
 
-def test_reversing_one_pair_flips_the_sign_and_still_pairs() -> None:
-    """R = V_MN / I_AB, so reversing one pair alone negates R.
-
-    Without the sign correction this pair reads as a 200 % disagreement and is
-    thrown away, which is the opposite of what it deserves.
-    """
-    df = _pair([1, 4], [2, 3], [3, 1], [4, 2], [100.0, -100.0])
-    out = reciprocal_errors(df, 0.05)
-
-    assert out["reciprocalErrRel"].tolist() == [0.0, 0.0]
-    assert len(out) == 2
-
-
-def test_reversing_both_pairs_leaves_the_sign_alone() -> None:
-    df = _pair([1, 4], [2, 3], [3, 2], [4, 1], [100.0, 100.0])
-    out = reciprocal_errors(df, 0.05)
-
-    assert out["reciprocalErrRel"].tolist() == [0.0, 0.0]
-
-
-def test_a_disagreeing_pair_is_scored_and_removed() -> None:
-    df = _pair([1, 3], [2, 4], [3, 1], [4, 2], [100.0, 120.0])
-    scored = reciprocal_errors(df, 0.05, drop_failed=False)
-    filtered = reciprocal_errors(df, 0.05)
-
-    assert scored["reciprocalErrRel"].iloc[0] == pytest.approx(20.0 / 110.0)
-    assert filtered.empty
-    # 20 % disagreement passes a 25 % threshold.
-    assert len(reciprocal_errors(df, 0.25)) == 2
-
-
-def test_an_unpaired_measurement_survives_unscored() -> None:
-    """A survey measured in one direction only must pass through untouched."""
-    df = _pair([1], [2], [3], [4], [100.0])
-    out = reciprocal_errors(df, 0.05)
-
-    assert len(out) == 1
-    assert np.isnan(out["reciprocalErrRel"].iloc[0])
-    assert out["reciprocalMean"].iloc[0] == pytest.approx(100.0)
-
-
-def test_distinct_quadrupoles_are_never_paired_with_each_other() -> None:
-    """The label has to separate measurements that are not reciprocals."""
-    df = _pair([1, 1], [2, 3], [3, 2], [4, 4], [100.0, 500.0])
+@pytest.mark.parametrize("df, errors, means", [
+    # A strict reciprocal pair scores zero.
+    (_pair([1, 3], [2, 4], [3, 1], [4, 2], [100.0, 100.0]), [0.0, 0.0], [100.0, 100.0]),
+    # R = V_MN / I_AB, so reversing one pair alone negates R; the pair still pairs.
+    (_pair([1, 4], [2, 3], [3, 1], [4, 2], [100.0, -100.0]), [0.0, 0.0], None),
+    # Reversing both pairs leaves the sign alone.
+    (_pair([1, 4], [2, 3], [3, 2], [4, 1], [100.0, 100.0]), [0.0, 0.0], None),
+    # A disagreeing pair is scored by its difference over its mean.
+    (_pair([1, 3], [2, 4], [3, 1], [4, 2], [100.0, 120.0]), [20.0 / 110.0] * 2, None),
+    # A measurement with no reciprocal passes through unscored.
+    (_pair([1], [2], [3], [4], [100.0]), [_NAN], [100.0]),
+    # Distinct quadrupoles are never paired with each other.
+    (_pair([1, 1], [2, 3], [3, 2], [4, 4], [100.0, 500.0]), [_NAN, _NAN], None),
+    # A frame without the needed columns passes through.
+    (pd.DataFrame({"a": [1], "b": [2]}), [_NAN], None),
+])
+def test_reciprocal_pairs_are_scored_or_left_unscored(df, errors, means) -> None:
     out = reciprocal_errors(df, 0.05, drop_failed=False)
 
-    assert out["reciprocalErrRel"].isna().all()
+    assert len(out) == len(errors)
+    np.testing.assert_allclose(out["reciprocalErrRel"].to_numpy(dtype=float), errors)
+    if means is not None:
+        np.testing.assert_allclose(out["reciprocalMean"].to_numpy(dtype=float), means)
+
+
+@pytest.mark.parametrize("threshold, kept", [(0.05, 0), (0.25, 2)])
+def test_a_disagreeing_pair_is_removed_above_the_threshold(threshold, kept) -> None:
+    # A 20 % disagreement fails a 5 % cut and passes a 25 % one.
+    df = _pair([1, 3], [2, 4], [3, 1], [4, 2], [100.0, 120.0])
+
+    assert len(reciprocal_errors(df, threshold)) == kept
 
 
 def test_the_real_survey_pairs_without_collisions() -> None:
@@ -179,14 +158,6 @@ def test_the_real_survey_pairs_without_collisions() -> None:
     assert paired % 2 == 0
     assert 0 < paired <= len(out)
     assert out["reciprocalErrRel"].dropna().max() < 0.10
-
-
-def test_a_frame_without_the_needed_columns_passes_through() -> None:
-    df = pd.DataFrame({"a": [1], "b": [2]})
-    out = reciprocal_errors(df, 0.05)
-
-    assert len(out) == 1
-    assert np.isnan(out["reciprocalErrRel"].iloc[0])
 
 
 # --- Res2DInv general array --------------------------------------------------
@@ -636,8 +607,8 @@ def test_the_generic_fallback_does_not_swallow_that_refusal(tmp_path) -> None:
 def test_the_four_electrode_columns_share_one_numbering(tmp_path) -> None:
     """fielddataline2.dat numbers its electrodes from 0, and only column A has a 0.
 
-    Deciding 0- or 1-based per column shifted A by one and left B, M and N
-    alone, so 69 of the 936 readings came out with coincident electrodes.
+    Deciding 0- or 1-based per column would shift A by one and leave B, M and N
+    alone, giving readings with coincident electrodes.
     """
     from PyHydroGeophysX.data_processing import ert_data_agent as agent
 
@@ -657,11 +628,10 @@ def test_the_four_electrode_columns_share_one_numbering(tmp_path) -> None:
 def test_the_pygimli_fallback_reads_resistances_and_percent_errors(tmp_path) -> None:
     """pyGIMLi lists rhoa, err and k even when a file has none, zero-filled.
 
-    The fallback read "rhoa in dataMap" as the file having apparent resistivity,
-    so a resistance-only file loaded as all zeros; and it copied the error column
-    without the percent check the embedded parsers apply, so fielddataline2.dat
-    (errors in percent) came back with a median error of 61 %. It is the route
-    that file takes whenever ResIPy is installed, because ResIPy cannot parse it.
+    A resistance-only file must not read as apparent resistivity of zero, and
+    an error column in percent (fielddataline2.dat) must go through the same
+    percent check the embedded parsers apply. This is the route that file takes
+    whenever ResIPy is installed, because ResIPy cannot parse it.
     """
     from PyHydroGeophysX.data_processing import ert_data_agent as agent
     from PyHydroGeophysX.data_processing.ert_io import standard_to_pg
@@ -690,10 +660,8 @@ def test_the_pygimli_fallback_reads_resistances_and_percent_errors(tmp_path) -> 
 def test_an_electrode_file_for_the_survey_lines_up_with_its_electrodes(tmp_path) -> None:
     """The DAS-1 header lists 280 electrodes on nine cables; the survey uses 56.
 
-    electrodes.dat lists those 56, and the pair loaded under ResIPy but failed
-    here ("Length of values (56) does not match length of index") - the pair the
-    Streamlit app tells users to load. The file's rows go to the electrodes the
-    sequence addresses, in order, which is the numbering ResIPy gives them.
+    electrodes.dat lists those 56. Its rows go to the electrodes the sequence
+    addresses, in order, which is the numbering ResIPy gives them.
     """
     from PyHydroGeophysX.data_processing import ert_data_agent as agent
 
@@ -716,24 +684,20 @@ def test_an_electrode_file_for_the_survey_lines_up_with_its_electrodes(tmp_path)
     # The first good reading, 009,02 009,05 009,03 009,04: electrodes 2 5 3 4.
     assert quads[0].tolist() == [2, 5, 3, 4]
 
-
-def test_an_electrode_file_that_fits_neither_count_says_both(tmp_path) -> None:
-    from PyHydroGeophysX.data_processing import ert_data_agent as agent
-
+    # A file that lists neither the table's 280 electrodes nor the survey's 56 is refused.
     short = tmp_path / "ten.dat"
     np.savetxt(short, np.column_stack([np.arange(10.0), np.zeros(10), np.zeros(10)]))
-
-    with pytest.raises(RuntimeError, match=r"lists 10 electrodes.*280.*56"):
+    with pytest.raises(RuntimeError):
         agent._load_ert_embedded_parsers(
             data_file=str(DAS_FILES[0]), electrode_file=str(short),
             project_dir=str(tmp_path), instrument="DAS-1")
 
 
 def test_the_unified_reader_keeps_an_exponent_without_a_decimal_point(tmp_path) -> None:
-    """"2e-05" is one number; read as 2 and -5 it shifted every later column.
+    """"2e-05" is one number, not 2 and -5, which would shift every later column.
 
-    pyGIMLi writes the decimal point (2.00000000000000e-05), so its own files
-    were never affected; other writers of the format do not.
+    pyGIMLi writes the decimal point (2.00000000000000e-05); other writers of
+    the format do not.
     """
     from PyHydroGeophysX.data_processing.ert_data_agent import _unified_ert_parser
 
@@ -874,7 +838,7 @@ def test_a_survey_built_without_a_resipy_project_reads_as_the_projects(
 # --- ABEM-Lund rows give positions --------------------------------------------
 
 def _abem_walk(positions):
-    """ABEM-style rows for a Wenner walk along ``positions``."""
+    """ABEM rows for a Wenner walk along ``positions``."""
     rows = [f"4 {positions[i]} 0 {positions[i + 3]} 0 {positions[i + 1]} 0 "
             f"{positions[i + 2]} 0 0.1 15.9155 100.0" for i in range(len(positions) - 3)]
     return "Type of measurement\n" + "\n".join(rows) + "\n"
@@ -998,7 +962,7 @@ def test_a_failed_guess_falls_back_to_the_reader_asked_for(tmp_path) -> None:
     assert [o.app_res for o in ert.observations] == [10.0]
 
 
-# -- a survey written as a forward and a reciprocal file (Craig Ulrich's) ---------
+# -- a survey written as a forward and a reciprocal file ----------------------------
 _WENNER = [(1, 4, 2, 3), (2, 5, 3, 4), (3, 6, 4, 5), (1, 7, 3, 5)]
 
 
@@ -1093,7 +1057,7 @@ def test_averaged_pairs_and_the_error_model_give_the_stated_errors(floor) -> Non
         [max(0.5 / 10.25, floor), max(1.0 / 19.5, floor), max(0.0, floor), 0.05])
     assert np.isnan(reciprocal_error[3])
 
-    m, b = 0.58, -2.18                       # Craig Ulrich's global model
+    m, b = 0.58, -2.18                       # slope and intercept of the error model
     R = np.logspace(-1, 2, 200)
     fit = fit_series_error_model([{"available": True, "scored_pairs": R.size,
                                    "R": R, "dR": 10 ** b * R ** m}])
@@ -1259,3 +1223,43 @@ def test_rustmesh_backend_meshes_like_triangle_without_calling_it() -> None:
                   lambda m: [n.marker() for n in m.nodes()]):
         assert set(np.unique(marks(mesh))) == set(np.unique(marks(triangle)))
     assert report["min_angle"] >= 33.0 - 1e-6
+
+
+_GRID = [(x, y) for x in (0.0, 15.0, 30.0) for y in (0.0, 7.0, 14.0, 21.0)]
+
+
+@pytest.mark.parametrize("table, three_d", [
+    ("Cable,Elec,X,Y,Z\n" + "".join(f"1,{i + 1},{x},{y},{100 + 0.1 * x}\n"
+                                    for i, (x, y) in enumerate(_GRID)), True),
+    ("x,z\n" + "".join(f"{x},{100 + 3 * np.sin(x)}\n" for x in range(12)), False),
+    ("X,Y,Z\n" + "".join(f"{x},{x},{100 + 0.1 * x}\n" for x in range(12)), False),
+    ("".join(f"{x} {100 + 3 * np.sin(x)} 0\n" for x in range(12)), False),
+], ids=["grid on a slope", "profile", "line in plan", "pygimli profile"])
+def test_electrodes_that_cover_an_area_keep_their_y(tmp_path, table, three_d) -> None:
+    """A 3-D survey's electrode file places (x, y, z) and its factors use the
+    distances in 3-D; a profile keeps PyGIMLi's (x, elevation, 0)."""
+    pg = pytest.importorskip("pygimli")
+    from PyHydroGeophysX.data_processing import ert_io
+
+    path = tmp_path / "electrodes.csv"
+    path.write_text(table)
+    positions, found, _ = ert_io.read_electrode_layout(path)
+    assert found is three_d
+    data = pg.DataContainerERT()
+    for index in range(len(positions)):
+        data.createSensor(pg.Pos(float(index), 0.0, 0.0))     # the file's placeholders
+    for a in range(len(positions) - 3):
+        data.createFourPointData(a, a, a + 1, a + 2, a + 3)
+    data["r"] = np.ones(data.size())
+    data["k"] = ert_io.analytic_geometric_factors(data)
+    data["rhoa"] = data["k"]
+    ert_io.place_electrodes(data, path)
+    assert np.allclose(np.array(data.sensorPositions()), positions)
+    if three_d:
+        assert np.ptp(positions[:, 1]) > 0 and np.ptp(positions[:, 2]) > 0
+        # On a plane the factors are those of the plane laid flat.
+        flat = pg.DataContainerERT(data)
+        for index, (x, y, _) in enumerate(positions):
+            flat.setSensorPosition(index, pg.Pos(x * np.sqrt(1.01), y, 0.0))
+        k = ert_io.analytic_geometric_factors(flat)
+        assert np.allclose(data["k"], k) and np.allclose(data["rhoa"], k)

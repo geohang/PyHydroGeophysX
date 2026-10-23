@@ -20,6 +20,7 @@ from PySide6.QtGui import QBrush, QColor, QPainterPath, QPen
 from PySide6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
+    QGraphicsItem,
     QGraphicsPathItem,
     QPushButton,
     QSpinBox,
@@ -113,28 +114,74 @@ def first_arrival_onsets(disp: np.ndarray, dt: Optional[float], ratio_thr: float
     return onsets
 
 
+_CACHED = QGraphicsItem.CacheMode.DeviceCoordinateCache
+
+
+class _CachedPath(QGraphicsPathItem):
+    """The wiggles' fill, kept as a picture between redraws (see ``_CachedCurve``)."""
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.setCacheMode(_CACHED)
+
+    def setExportMode(self, export, opts=None):  # noqa: N802 - pyqtgraph exporter hook
+        self.setCacheMode(QGraphicsItem.CacheMode.NoCache if export else _CACHED)
+
+
+class _CachedCurve(pg.PlotCurveItem):
+    """The wiggle line, kept as a picture between redraws.
+
+    A wide gather's wiggles are a path through every sample of every trace.
+    Redrawn whole for each move of a Ctrl+drag line or each new marker, they
+    would hold the window still during a drag. Cached, only new data or a zoom
+    draws them again. The cache is off while pyqtgraph exports: zoomed far in,
+    a cached wiggle comes out of the PNG export blank.
+    """
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.setCacheMode(_CACHED)
+
+    def setExportMode(self, export, opts=None):  # noqa: N802 - pyqtgraph exporter hook
+        self.setCacheMode(QGraphicsItem.CacheMode.NoCache if export else _CACHED)
+        return super().setExportMode(export, opts)
+
+
 class _PickViewBox(pg.ViewBox):
     """ViewBox that turns Ctrl+left-drag into a line-pick gesture.
 
     Without the Ctrl modifier it behaves like a normal ViewBox (pan/zoom).
+    Whether a drag draws a line is settled when it starts: letting go of Ctrl
+    before the mouse button, the usual order, must not hand the rest of the
+    drag to panning, which would leave the line unpicked and on screen.
     """
 
     dragStarted = Signal(object)
     dragMoved = Signal(object)
     dragFinished = Signal(object)
 
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self._line_drag = False
+
     def mouseDragEvent(self, ev, axis=None):  # noqa: N802 - pyqtgraph API
-        if ev.button() == Qt.LeftButton and (ev.modifiers() & Qt.ControlModifier):
-            ev.accept()
-            point = self.mapSceneToView(ev.scenePos())
-            if ev.isStart():
-                self.dragStarted.emit(point)
-            elif ev.isFinish():
-                self.dragFinished.emit(point)
-            else:
-                self.dragMoved.emit(point)
-        else:
+        if ev.button() != Qt.LeftButton:
             super().mouseDragEvent(ev, axis)
+            return
+        if ev.isStart():
+            self._line_drag = bool(ev.modifiers() & Qt.ControlModifier)
+        if not self._line_drag:
+            super().mouseDragEvent(ev, axis)
+            return
+        ev.accept()
+        point = self.mapSceneToView(ev.scenePos())
+        if ev.isStart():
+            self.dragStarted.emit(point)
+        elif ev.isFinish():
+            self._line_drag = False
+            self.dragFinished.emit(point)
+        else:
+            self.dragMoved.emit(point)
 
 
 class SeismicViewer(QWidget):
@@ -226,18 +273,18 @@ class SeismicViewer(QWidget):
 
         self._img = pg.ImageItem()
         self._img.setZValue(-10)
-        # The gather's own map builds exactly the table it always had.
+        # The lookup table comes from the chosen map (the gather's own by default).
         self._lut = cmaps.lookup_table(self._colormap.colormap(), 256)
         self._img.setLookupTable(self._lut)
         self._plot.addItem(self._img)
 
-        self._fill_item = QGraphicsPathItem()
+        self._fill_item = _CachedPath()
         self._fill_item.setBrush(QBrush(QColor(0, 0, 0, 150)))
         self._fill_item.setPen(QPen(Qt.NoPen))
         self._fill_item.setZValue(-5)
         self._vb.addItem(self._fill_item)
 
-        self._wiggle = pg.PlotCurveItem(pen=pg.mkPen(QColor(15, 15, 15, 220), width=1.0), connect="finite")
+        self._wiggle = _CachedCurve(pen=pg.mkPen(QColor(15, 15, 15, 220), width=1.0), connect="finite")
         self._wiggle.setZValue(0)
         self._plot.addItem(self._wiggle)
 
@@ -305,11 +352,16 @@ class SeismicViewer(QWidget):
     def set_pick_mode(self, enabled: bool) -> None:
         self._pick_mode = bool(enabled)
 
-    def set_picks(self, picks: Dict[int, Tuple[float, str]]) -> None:
-        """picks: trace_index -> (time_s, source)."""
+    def set_picks(self, picks: Dict[int, Tuple[float, str]], fit: bool = True) -> None:
+        """picks: trace_index -> (time_s, source).
+
+        ``fit`` False leaves the view where it is, for picks made by hand:
+        refitting the time window to them threw away the zoom the user was
+        picking in, at every click.
+        """
         self._picks = dict(picks)
         self._render_picks()
-        if self._auto_window_on and self._picks:
+        if fit and self._auto_window_on and self._picks:
             self._window_max = self._estimate_window()
             self._set_tmax_spin_value(self._window_max)
             self._apply_view()
@@ -435,7 +487,7 @@ class SeismicViewer(QWidget):
     def _draw_wiggle(self, clip: float) -> None:
         # Vectorized: build the wiggle line and its variable-area fill from whole
         # arrays (one QPainterPath via arrayToQPath) instead of a per-sample Python
-        # lineTo loop, which is what made a wide gather stutter on every redraw.
+        # lineTo loop, which makes a wide gather stutter on every redraw.
         disp, t = self._disp, self._time
         if disp is None or t is None or disp.size == 0:
             self._wiggle.setData([], [])
@@ -532,6 +584,10 @@ class SeismicViewer(QWidget):
         unit = "s" if self._dt else "smp"
         self._readout.setText(f"trace: {trace}, time: {t:.4g} {unit}, amp: {amp:.3g}")
 
+    def _in_record(self, t: float) -> bool:
+        """Whether ``t`` lies between the record's first and last sample."""
+        return 0.0 <= t <= float(self._full_max or 0.0)
+
     def _on_click(self, event) -> None:
         if event.button() != Qt.LeftButton or not self._pick_mode:
             return
@@ -539,6 +595,8 @@ class SeismicViewer(QWidget):
         if hit is None:
             return
         trace, t, amp = hit
+        if not self._in_record(t):
+            return  # above time zero or past the record's end: nothing recorded there
         self.pointPicked.emit(int(trace), float(t), float(amp))
 
     # -- line pick (Ctrl + drag) ---------------------------------------------
@@ -573,6 +631,8 @@ class SeismicViewer(QWidget):
         points = []
         for trace in range(lo, hi + 1):
             t = y1 if x1 == x0 else y0 + (y1 - y0) * (trace - x0) / (x1 - x0)
+            if not self._in_record(t):
+                continue
             sample = max(0, min(int(round(t / dt)), nsamples - 1))
             points.append((int(trace), float(t), float(self._disp[sample, trace])))
         if points:

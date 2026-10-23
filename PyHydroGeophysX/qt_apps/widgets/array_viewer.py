@@ -31,7 +31,7 @@ from PyHydroGeophysX.qt_apps.widgets.readout import ReadoutLabel
 # default of image[x, y]. This makes click -> [col, row] mapping correct.
 pg.setConfigOptions(imageAxisOrder="row-major", antialias=False)
 
-#: The gradient preset every array viewer opened with before it had a chooser.
+#: The colour map array viewers open with, a pyqtgraph gradient preset.
 _DEFAULT_MAP = "viridis"
 
 
@@ -120,7 +120,7 @@ class ArrayViewer(QWidget):
         self._plot.addItem(self._profile_line)
 
         # The colour map, shared under colormap_key with every other viewer of
-        # the same kind of array. Opens on the preset above, drawn as before.
+        # the same kind of array. Opens on the preset above.
         self._colormap = cmaps.ColormapChooser(colormap_key, _DEFAULT_MAP, shared=colormaps)
         self._colormap.colormapChanged.connect(self._apply_colormap)
         if self._colormap.colormap() != _DEFAULT_MAP:
@@ -321,8 +321,8 @@ class ArrayViewer(QWidget):
         return self._colormap
 
     def _apply_colormap(self, name: str) -> None:
-        # The default is the gradient preset these viewers always opened with,
-        # loaded as such so it looks exactly as it did; any other map in full.
+        # The default is loaded as pyqtgraph's gradient preset of that name;
+        # any other map is applied in full.
         try:
             cmaps.apply_to_histogram(
                 self._hist, name, preset=name if name == _DEFAULT_MAP else None)

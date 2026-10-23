@@ -100,7 +100,7 @@ class _TracebackFilter:
     """Tell the lines of a Python traceback in a process's output from the rest.
 
     A workflow that fails prints its traceback, a dozen lines of file names,
-    source lines and carets, and in the Log panel they buried the one line
+    source lines and carets, and in the Log panel they would bury the one line
     that says what went wrong - which the failure message gives anyway, with
     where the whole output is kept (``logs/workflow_output.log``, which keeps
     every line). One filter per output stream, whose lines arrive on their
@@ -266,11 +266,11 @@ def _workflow_environment() -> QProcessEnvironment:
     environment.insert("PYTHONUTF8", "1")
     environment.insert("PYTHONIOENCODING", "utf-8")
     # The process must import the PyHydroGeophysX this studio runs. Started from
-    # a checkout, the studio found the package through its own working folder
+    # a checkout, the studio finds the package through its own working folder
     # or sys.path, which a process started in the project folder does not
-    # share, and that process imported whatever other copy the environment
-    # held: an older checkout lacked workflow_standby and every run failed. An
-    # installed package is already on the child's path and is left alone.
+    # share; that process would import whatever other copy the environment
+    # holds, possibly an older one without ``workflow_standby``. An installed
+    # package is already on the child's path and is left alone.
     package_root = _package_root()
     if package_root.name.lower() not in ("site-packages", "dist-packages"):
         existing = [entry for entry in environment.value("PYTHONPATH", "").split(os.pathsep)
@@ -280,17 +280,17 @@ def _workflow_environment() -> QProcessEnvironment:
     return environment
 
 
-#: Set to 0 to start every workflow process when its run starts, as before
-#: :class:`_Standby` kept one waiting.
+#: Set to 0 to start every workflow process when its run starts, instead of
+#: keeping one waiting (:class:`_Standby`).
 WARM_WORKER_ENV = "PHGX_WARM_WORKER"
 
 
 class _Standby:
     """The workflow process started ahead of the next run.
 
-    Starting a workflow process cost about a second before the workflow ran -
-    the interpreter and the numerical libraries it imports - and every run paid
-    it while the user watched. One process is kept started and waiting instead
+    Starting a workflow process takes time before the workflow runs - the
+    interpreter and the numerical libraries it imports - and a run would pay it
+    while the user watched. One process is kept started and waiting instead
     (``PyHydroGeophysX._internal.workflow_standby``), having loaded those
     libraries while nobody was waiting; a run takes it over, and the next one is
     started at once. Each still serves one run only, so a run is cancelled by
@@ -299,7 +299,7 @@ class _Standby:
     Idle, it holds the libraries in memory, about 200 MB; ``PHGX_WARM_WORKER=0``
     turns it off. One that dies while waiting is replaced, and after three such
     deaths no more are started this session: every run then starts its own
-    process, as it always did.
+    process.
     """
 
     MODULE = "PyHydroGeophysX._internal.workflow_standby"
@@ -328,9 +328,9 @@ class _Standby:
             self._quit_hooked = True
         # It waits in the folder holding the package it runs, which the studio
         # never deletes; a run moves it to the run's own folder. Windows will not
-        # delete a folder that is a process's working directory, and waiting in
-        # the folder of the run that started it left that run impossible to
-        # discard (WinError 32) until the next run took the process away.
+        # delete a folder that is a process's working directory (WinError 32),
+        # so a process waiting in the folder of the run that started it would
+        # block discarding that run until the next run took the process over.
         process = QProcess(app)
         process.setWorkingDirectory(str(_package_root()))
         process.setProcessEnvironment(_workflow_environment())
@@ -615,7 +615,7 @@ class ProcessProbeWorker(QObject):
     def wait(self, timeout_ms: int = 30000) -> bool:
         return bool(self.process.waitForFinished(int(timeout_ms)))
 
-    def isRunning(self) -> bool:  # noqa: N802 - mirror QThread's public API
+    def isRunning(self) -> bool:  # noqa: N802 - QThread's method name
         return self.process.state() != QProcess.ProcessState.NotRunning
 
     def is_cancelled(self) -> bool:
@@ -651,12 +651,11 @@ class ProcessProbeWorker(QObject):
             )
             return
         # A read or write error does not end the process, and nothing else here
-        # would have noticed: the run hung with no message and no result. That
-        # became reachable when the input channel started staying open for the
-        # whole run so the child could be answered mid-run - a failed write to
-        # that channel means the child is waiting for an answer it will never
-        # get. Killing it turns a silent hang into a reported failure, which is
-        # the difference between a bug report and a mystery.
+        # would notice it: the run would hang with no message and no result. The
+        # input channel stays open for the whole run so the child can be
+        # answered mid-run - a failed write to that channel means the child is
+        # waiting for an answer it will never get. Killing the process turns a
+        # silent hang into a reported failure.
         if error in (QProcess.ProcessError.WriteError,
                      QProcess.ProcessError.ReadError):
             channel = "sending to" if error == QProcess.ProcessError.WriteError \
@@ -739,10 +738,11 @@ class ProcessProbeWorker(QObject):
 class _ResultLoader(QThread):
     """Read a finished run's result, and the objects it sent back, off the UI thread.
 
-    Reading a large result took the window half a second: the JSON, then the
-    mesh and the arrays the page shows (``workflows.objects``). Here that work
-    no longer stops the window painting - except while PyGIMLi builds a mesh,
-    which holds the interpreter wherever it runs.
+    Reading a large result - the JSON, then the mesh and the arrays the page
+    shows (``workflows.objects``) - takes long enough to freeze the window if
+    the UI thread does it. Here that work does not stop the window painting,
+    except while PyGIMLi builds a mesh, which holds the interpreter wherever it
+    runs.
     """
 
     loaded = Signal(object, object)       # the result, what did not come back
@@ -821,17 +821,17 @@ class ProcessWorkflowWorker(QObject):
         #: What of each stream is a traceback, kept from the Log panel.
         self._tracebacks = {stream: _TracebackFilter() for stream in ("stdout", "stderr")}
         #: The child's last exception line, e.g. "ValueError: 'x.dat' could not
-        #: be read as DAS-1: ...". A failed run reported only its exit code, and
-        #: the reason was left somewhere in the log above.
+        #: be read as DAS-1: ...". It lets a failed run report the reason, not
+        #: only its exit code.
         self._last_exception = ""
         #: The first line the child printed about running out of memory, which a
         #: native solver prints as ordinary output just before it crashes.
         self._memory_hint = ""
         #: Whether the run failed because an engine it needs is missing, rather
-        #: than in its own work. Pages that fall back to exporting their
-        #: configuration when a backend is absent did so for every failure, and
-        #: a run that ran out of memory or was handed arrays of the wrong shape
-        #: was reported as "backend not found". Set when the failure is.
+        #: than in its own work. Pages fall back to exporting their
+        #: configuration when a backend is absent; this tells that case from a
+        #: run that ran out of memory or was handed arrays of the wrong shape.
+        #: Set only when the failure is a missing engine.
         self.missing_backend = False
         #: The child's lines not yet appended to the run's output log.
         self._output_unwritten: list = []
@@ -927,7 +927,7 @@ class ProcessWorkflowWorker(QObject):
             self._loader.wait(int(timeout_ms))
         return done
 
-    def isRunning(self) -> bool:  # noqa: N802 - mirror QThread's public API
+    def isRunning(self) -> bool:  # noqa: N802 - QThread's method name
         # Still running while its result is read: nothing has been delivered.
         return (self.process.state() != QProcess.ProcessState.NotRunning
                 or (self._loader is not None and self._loader.isRunning()))
@@ -994,11 +994,11 @@ class ProcessWorkflowWorker(QObject):
     def _append_output_log(self, closing: str = "") -> Path | None:
         """Append the child's new lines to its run's ``logs/workflow_output.log``.
 
-        The page's log panel is gone with the session, and a run that crashed
-        otherwise left an empty ``logs`` folder and an exit code behind. All of
-        the output is kept: a 2000-line tail lost the start of a long windowed
-        run - its settings, its data checks - which is where a failure is
-        usually explained. ``closing`` is a last line, the exit code. Written
+        The page's log panel is gone with the session, so a run that crashed
+        would otherwise leave an empty ``logs`` folder and an exit code behind.
+        All of the output is kept, not a tail: the start of a long windowed
+        run - its settings, its data checks - is where a failure is usually
+        explained. ``closing`` is a last line, the exit code. Written
         only where the result sits in a run folder that has a ``logs`` folder;
         lines a write could not take (a file held a moment by OneDrive) wait
         for the next.

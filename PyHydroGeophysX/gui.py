@@ -10,8 +10,8 @@ from typing import List, Optional, Sequence, Tuple
 APP_RELATIVE_PATH = Path("examples") / "app_geophysics_workflow.py"
 
 #: What a pip install is told. The Streamlit apps live in examples/, which the
-#: wheel does not include, so the launcher of an installed package found nothing
-#: to run and ended in a FileNotFoundError traceback.
+#: wheel does not include, so the launcher of an installed package has nothing
+#: to run and exits with this instead of a FileNotFoundError traceback.
 NOT_BUNDLED_MESSAGE = (
     "The PyHydroGeophysX web apps ship with the source repository, not with the "
     "pip package, and no copy was found beside this installation or in the "

@@ -38,7 +38,7 @@ def select_renderer(
     if fmt in _IMAGE_FORMATS:
         return "image"
     # A run's own records - settings, QC report, logs - are text for people,
-    # not tables: a .txt read as delimited columns came out as one garbled cell.
+    # not tables: a .txt read as delimited columns comes out as one garbled cell.
     if fmt == "log" or kind in _TEXT_KINDS:
         return "text"
     if fmt in {"npy", "npz"}:

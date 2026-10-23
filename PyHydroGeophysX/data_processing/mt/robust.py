@@ -24,9 +24,9 @@ Booker 1986; Chave et al. 1987):
    distribution for complex Gaussian inputs, Beta(p, n - p), get
    ``(cutoff / h_i)^2``. The leverage weights accumulate from iteration to
    iteration, so a point once downweighted stays so and none keeps more
-   leverage than the cutoff. ``leverage_cutoff`` is the
-   older, single-pass form: hat values above that many times their mean
-   ``p/n`` downweighted in proportion, after the M-estimate.
+   leverage than the cutoff. ``leverage_cutoff`` is a single-pass form: hat
+   values above that many times their mean ``p/n`` are downweighted in
+   proportion, after the M-estimate.
 
 4. optionally, noise classes (the noise-weighted estimate of Chen 2020): when
    the noise grows with the signal - the residual power ``|r_i|^2`` rising
@@ -333,9 +333,9 @@ def _m_estimate(y: np.ndarray, X: np.ndarray, R: np.ndarray, cfg: RegressionConf
     n, p = X.shape
     if n <= p:
         raise ValueError(f"{n} points cannot determine {p} coefficients")
-    # A night of bursts gives millions of points per band, so every array the
-    # iterations need is made once and rewritten in place: each solve is then
-    # one pass over the points and each residual another, with no allocation.
+    # A long burst recording gives millions of points per band, so every array
+    # the iterations need is made once and rewritten in place: each solve is
+    # then one pass over the points and each residual another, with no allocation.
     Rh = np.ascontiguousarray(R.conj().T)
     Xy = np.column_stack([X, y])
     weighted = np.empty_like(Rh)
@@ -389,7 +389,7 @@ def _m_estimate(y: np.ndarray, X: np.ndarray, R: np.ndarray, cfg: RegressionConf
             break
     u0 = cfg.redescend
     # Leverage weights settle over several rounds, so with them the redescending
-    # stage runs until the estimate does (it stopped short with the usual two).
+    # stage runs until the estimate settles, not for the usual two iterations.
     rounds = cfg.redescend_iterations if leverage is None else max(cfg.redescend_iterations,
                                                                     cfg.max_iterations)
     for k in range(rounds):

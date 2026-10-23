@@ -1,10 +1,10 @@
 """Stop a module page from demanding more width than the screen has.
 
 Qt propagates a widget's content width upward as a hard minimum. A paragraph of
-guidance text in a QLabel that forgot ``setWordWrap`` therefore becomes a floor
-on the whole window: the studio asked for 2699 px on a 1920 px monitor, which
-Windows cannot grant, so every layout pass logged ``QWindowsWindow::setGeometry:
-Unable to set geometry`` and the panels were squeezed anyway.
+guidance text in a QLabel without ``setWordWrap`` therefore becomes a floor on
+the whole window: the studio can ask for more width than the monitor has, which
+Windows cannot grant, so every layout pass logs ``QWindowsWindow::setGeometry:
+Unable to set geometry`` and the panels are squeezed anyway.
 
 :func:`relax_minimum_width` walks a finished page once and makes its widgets
 shrinkable, choosing per widget rather than uniformly:
@@ -142,7 +142,7 @@ def _text_width(widget: QWidget, text: str) -> int:
 
     Deliberately not ``minimumSizeHint``: this pass runs when a page is built,
     which for the first page happens before the window is shown. An unpolished
-    widget reports a placeholder hint, so gating on it silently relaxed nothing.
+    widget reports a placeholder hint, so gating on it would relax nothing.
     Font metrics are valid from construction.
     """
     return QFontMetrics(widget.font()).horizontalAdvance(text)

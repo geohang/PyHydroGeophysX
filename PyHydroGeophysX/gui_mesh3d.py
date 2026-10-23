@@ -10,8 +10,8 @@ from typing import List, Optional, Sequence, Tuple
 APP_RELATIVE_PATH = Path("examples") / "app_mesh3d.py"
 
 #: What a pip install is told. The app lives in examples/, which the wheel does
-#: not include, so an installed launcher found nothing to run and ended in a
-#: FileNotFoundError traceback.
+#: not include, so an installed launcher has nothing to run and exits with this
+#: instead of a FileNotFoundError traceback.
 NOT_BUNDLED_MESSAGE = (
     "The PyHydroGeophysX 3D Mesh Builder app ships with the source repository, "
     "not with the pip package, and no copy was found beside this installation or "

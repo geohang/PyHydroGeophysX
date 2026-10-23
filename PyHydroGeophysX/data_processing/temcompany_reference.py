@@ -18,10 +18,8 @@ constraints a run used rather than only its result. Those are reached through
 This module reads those records so that results produced earlier can be loaded
 alongside the soundings they came from: plotted on a section, compared with a
 new inversion, or used to check that this package's own reader returns the same
-gates, values and errors the file holds. Measured over the 882 inverted
-stations of one survey, ``InputData`` is identical to ``LM/HM_VoltageValues``
-and ``InputSTD`` to ``LM/HM_VoltageValues_STD`` to the last bit, which is the
-property :mod:`tests.test_temcompany_alignment` asserts.
+gates, values and errors the file holds. ``InputData`` holds the same values as
+``LM/HM_VoltageValues`` and ``InputSTD`` the same as ``LM/HM_VoltageValues_STD``.
 
 Nothing here executes anything. It parses a database the acquisition software
 wrote.
@@ -171,8 +169,8 @@ def _spec_gate_indices(centres: np.ndarray, times: np.ndarray) -> np.ndarray:
     """Which of the instrument's gates a reference block used.
 
     Matching on the centre time rather than on position, because the stored
-    selection is not contiguous: over one survey only 36 percent of the HM
-    selections were a single run of gates.
+    selection is not contiguous: most HM selections are not a single run of
+    gates.
     """
     centres = np.asarray(centres, dtype=float).ravel()
     times = np.asarray(times, dtype=float).ravel()
@@ -191,8 +189,8 @@ def iter_reference_stations(
     """Yield one dict per station of a stored inversion, in file order.
 
     ``inversion_name`` selects among several saved runs; the default is
-    whichever name carries the most rows, which is the full-survey inversion in
-    every project seen so far.
+    whichever name carries the most rows, which is normally the full-survey
+    inversion.
     """
     database = temcompany_project.project_file(path)
     connection = temcompany_project.open_project(database)

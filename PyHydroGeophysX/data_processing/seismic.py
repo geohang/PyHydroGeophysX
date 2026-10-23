@@ -1330,8 +1330,8 @@ def apply_agc(
 ) -> np.ndarray:
     """Apply gate-based automatic gain control to traces.
 
-    The implementation follows the MATLAB example's gate/interpolation logic
-    while handling zero-energy windows safely.
+    Each gate's RMS sets a gain, interpolated linearly between gate centres;
+    a gate with no energy keeps unit gain.
     """
 
     arr = np.asarray(data, dtype=float)
@@ -1370,7 +1370,7 @@ def apply_agc(
 
 
 def tukey_taper(n_samples: int, taper_samples: int) -> np.ndarray:
-    """Return a Tukey-style taper with taper length in samples."""
+    """Return a Tukey taper with taper length in samples."""
 
     if n_samples <= 0:
         raise ValueError("n_samples must be positive.")
@@ -1396,7 +1396,7 @@ def bandpass_filter(
 ) -> np.ndarray:
     """Apply a zero-phase Butterworth bandpass using the pass-band edges.
 
-    ``f1`` and ``f4`` are retained for API compatibility with Ormsby-style
+    ``f1`` and ``f4`` are retained for API compatibility with Ormsby
     four-corner filters; this implementation uses ``f2`` and ``f3`` as the
     pass-band edges.
     """

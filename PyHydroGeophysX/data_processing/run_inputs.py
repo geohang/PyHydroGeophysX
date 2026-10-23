@@ -1,14 +1,14 @@
 """One compact on-disk format for what a run keeps about its inputs.
 
-A run used to record its inputs by copying whatever the user had selected, so a
-run cost as much disk as the survey it read: a TEMcompany project folder runs to
-hundreds of megabytes and every inversion took another copy of it. What a run
-needs to be reproducible is the data the page imported, which is arrays and a
-little metadata, and not the acquisition those arrays were parsed out of.
+A run keeps its inputs in this format rather than as a copy of whatever the user
+selected, which would cost as much disk as the survey it read: a TEMcompany
+project folder runs to hundreds of megabytes. What a run needs to be
+reproducible is the data the page imported, which is arrays and a little
+metadata, and not the acquisition those arrays were parsed out of.
 
-The format is the one :mod:`PyHydroGeophysX.data_processing.joint_io` already
-used for its non-PyGIMLi observations, lifted out so every module writes the
-same thing: a single ``.npz`` holding the arrays, plus a JSON manifest stored
+The format is shared with :mod:`PyHydroGeophysX.data_processing.joint_io`, which
+uses it for its non-PyGIMLi observations, so every module writes the same
+thing: a single ``.npz`` holding the arrays, plus a JSON manifest stored
 under ``__manifest__`` that describes the structure they came from. Nesting is
 preserved, so a loader's return value can be handed straight to
 :func:`save_container` and comes back the same shape.
@@ -277,9 +277,9 @@ def load_sequence(source: str | Path, *, kind: Optional[str] = None) -> Tuple[li
 
     :func:`load_sequence_item` opens the archive and decompresses each
     stacked array to return one item, which is right for one item and
-    quadratic for all of them: reading 3000 soundings back that way took 16 s.
-    Here each array is read once, so the items share what the container
-    stored once and view what it stacked; copy one before changing it in place.
+    quadratic for all of them. Here each array is read once, so the items share
+    what the container stored once and view what it stacked; copy one before
+    changing it in place.
     """
     path = Path(source)
     with np.load(path, allow_pickle=False) as archive:
@@ -381,7 +381,7 @@ def is_file_bundle(source: str | Path) -> bool:
 
 
 def is_container(source: str | Path) -> bool:
-    """True when ``source`` is one of our containers.
+    """True when ``source`` is one of this package's containers.
 
     Reads the zip directory rather than the arrays, so this stays cheap enough
     to sit in a loader's dispatch chain in front of the file sniffers.

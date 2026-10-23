@@ -80,10 +80,10 @@ class _FittedReportBrowser(QTextBrowser):
 
     Shrinking is done here, smoothly, not left to the document. Given only a
     smaller width, Qt draws the full-size picture into it sampling the nearest
-    pixel: a 5690-pixel section shown 1300 wide kept one pixel in four and a
-    half, and its axis labels came out broken and jagged though the file was
-    sharp. Each figure is now scaled with filtering to the width it is shown
-    at, in device pixels on a high-DPI screen. While a resize drag goes on, the
+    pixel: a 5690-pixel section shown 1300 wide keeps one pixel in four and a
+    half, and its axis labels come out broken and jagged though the file is
+    sharp. Each figure is therefore scaled with filtering to the width it is
+    shown at, in device pixels on a high-DPI screen. While a resize drag goes on, the
     previous copy is stretched; the sharp one follows once it pauses.
     """
 
@@ -458,12 +458,10 @@ class OneClickModule(BaseModule):
         self.progress.setTextVisible(False)
         self.progress.setFixedHeight(4)
         layout.addWidget(self.progress)
-        # Off by default. The run used to visit the module doing each piece of
-        # work, so the user would watch it happen rather than a bar; now the
-        # live timeline shows each step's reason, result and figures on
-        # this page, and a window that keeps switching panels under the user
-        # was the worse way to show it. Kept as an option for anyone who wants
-        # to see each module's own panel as well.
+        # Off by default: the live timeline shows each step's reason, result
+        # and figures on this page, and a window that keeps switching panels
+        # under the user is the worse way to show a run. Available as an option
+        # for anyone who wants to see each module's own panel as well.
         self.follow = QCheckBox('Also bring each module to the front as it runs')
         self.follow.setChecked(False)
         self.follow.setToolTip(
@@ -1246,9 +1244,9 @@ class OneClickModule(BaseModule):
         turns it off, because a window that yanks itself away from someone
         reading a panel is worse than one that never moved.
 
-        Navigating alone was not enough. The workflow runs headless in its own
-        process while each module holds its own state, so arriving at one showed
-        an empty tool - "No files added", "No data loaded" - which reads as
+        Navigating alone is not enough. The workflow runs headless in its own
+        process while each module holds its own state, so arriving at one would
+        show an empty tool - "No files added", "No data loaded" - which reads as
         nothing having happened. The page is therefore also told what is running
         on it and handed the figures the run has written, which is the part the
         user can actually see.
@@ -1281,7 +1279,7 @@ class OneClickModule(BaseModule):
     def _show_inputs_on(self, page, module):
         """Ask a module to open the run's data, once, the first time it is visited.
 
-        The strip alone said what was happening over an empty tool. The files
+        The strip alone would say what is happening over an empty tool. The files
         the run is working on are ordinary files these panels can already open,
         so they open them - for display; the run keeps inverting its own copy in
         its own process.
@@ -1392,8 +1390,8 @@ class OneClickModule(BaseModule):
         """
         from PyHydroGeophysX.agents.runtime.catalog import MODEL_BUNDLE_DIR
         # No instrument unless the run names one. When nobody chose, the run
-        # reads it from each file's header; filling in E4D here had the studio
-        # open, say, a DAS-1 run's files with the E4D reader.
+        # reads it from each file's header; filling in E4D here would open,
+        # say, a DAS-1 run's files with the E4D reader.
         config = {}
         if not self._output:
             return config
@@ -1514,8 +1512,8 @@ class OneClickModule(BaseModule):
             beside = Path(self._replay_dir) / Path(report).name
             report = str(beside) if beside.is_file() else report
         # In the page's own report tab, for a replayed run too: handing the
-        # Markdown file to the system sent the reader to whatever program the
-        # machine associates with .md, without the figures laid out.
+        # Markdown file to the system would send the reader to whatever program
+        # the machine associates with .md, without the figures laid out.
         read = ('Read the report', lambda: self._show_report(report))
         known = {'report': read,
                  'replay': ('Replay this run', lambda: self.start_replay(

@@ -203,6 +203,32 @@ class VTKVolumeView(QWidget):
         ``cmap`` is the volume's default colour map: what it is drawn with until
         a map is chosen for this view's quantity.
         """
+        self._forget()
+        vtk_path = Path(path)
+        if not vtk_path.is_file():
+            self._info.setText(f"3D volume file not found: <code>{vtk_path}</code>")
+            return False
+        if not self.interactive_available and not linked_sections:
+            self._info.setText(
+                f"3D volume saved at <code>{vtk_path}</code>. "
+                "Use the Figures & files tab in this session."
+            )
+            return False
+        try:
+            if self._pv is None and linked_sections:
+                import pyvista
+                self._pv = pyvista
+            dataset = self._pv.read(str(vtk_path))
+        except Exception as exc:  # noqa: BLE001 - VTK backend-specific failures
+            self._info.setText(f"Could not display <code>{vtk_path.name}</code>: {exc}")
+            return False
+        return self.show_dataset(
+            dataset, name=vtk_path.name, scalar_candidates=scalar_candidates, cmap=cmap,
+            opacity=opacity, scalar_cmaps=scalar_cmaps, field_metadata=field_metadata,
+            linked_sections=linked_sections)
+
+    def _forget(self) -> None:
+        """Clear the view of the dataset it shows."""
         if self._sections is not None:
             self._sections.hide()
             if self._tabs is not None and self._tabs.count() > 1:
@@ -224,21 +250,32 @@ class VTKVolumeView(QWidget):
         elif self._notice is not None:
             self._notice.show()
             self._field.hide()
-        vtk_path = Path(path)
-        if not vtk_path.is_file():
-            self._info.setText(f"3D volume file not found: <code>{vtk_path}</code>")
-            return False
+
+    def show_dataset(
+        self,
+        dataset,
+        *,
+        name: str,
+        scalar_candidates: Sequence[str] = ("Velocity", "velocity"),
+        cmap: str = "turbo",
+        opacity: float = 0.65,
+        scalar_cmaps: Optional[dict] = None,
+        field_metadata: Optional[dict] = None,
+        linked_sections: bool = False,
+    ) -> bool:
+        """Display a PyVista dataset already in memory, named ``name``.
+
+        As :meth:`show_file`. A field whose ``field_metadata`` says ``log`` is
+        coloured on a logarithmic scale, as resistivity is.
+        """
+        if dataset is not self._mesh:
+            self._forget()
         if not self.interactive_available and not linked_sections:
-            self._info.setText(
-                f"3D volume saved at <code>{vtk_path}</code>. "
-                "Use the Figures & files tab in this session."
-            )
+            self._info.setText(f"{name}: interactive 3D is unavailable in this session.")
             return False
+        vtk_path = Path(str(name))
         try:
-            if self._pv is None and linked_sections:
-                import pyvista
-                self._pv = pyvista
-            self._mesh = self._pv.read(str(vtk_path))
+            self._mesh = dataset
             self._has_view = False
             self._clip_state = None
             self._field_metadata = dict(field_metadata or {})
@@ -307,6 +344,9 @@ class VTKVolumeView(QWidget):
         clim = None if categorical else self._colour_limits()
         if clim is not None:
             kwargs['clim'] = clim
+        if self._field_metadata.get(self._scalar, {}).get('log'):
+            kwargs['log_scale'] = not categorical
+            kwargs['scalar_bar_args']['fmt'] = '%.4g'
         self._colormap.setEnabled(not categorical)
         self._range.setEnabled(not categorical)     # labels have no colour scale
         metadata = self._field_metadata.get(self._scalar, {})
@@ -331,6 +371,13 @@ class VTKVolumeView(QWidget):
         except Exception:  # noqa: BLE001 - clip widgets can fail on some VTK builds
             actor = self._plotter.add_mesh(self._mesh, **kwargs)
         self._actors = [actor] if self._scalar else []
+        try:
+            # Labels under the bar, the title over it: on the same side they
+            # are drawn over one another.
+            for bar in self._plotter.scalar_bars.values():
+                bar.SetTextPositionToPrecedeScalarBar()
+        except Exception:  # noqa: BLE001 - cosmetic
+            pass
         try:
             self._plotter.add_mesh(self._mesh.outline(), color="grey")
         except Exception:  # noqa: BLE001 - outline is cosmetic
@@ -413,7 +460,7 @@ class VTKVolumeView(QWidget):
             pass
 
     def showEvent(self, event) -> None:  # noqa: N802 - Qt override
-        """Render once the view is on screen, which the timer used to see to."""
+        """Render once the view is on screen."""
         super().showEvent(event)
         if self._plotter is not None:
             QTimer.singleShot(0, self._refresh)
@@ -446,9 +493,10 @@ class VTKVolumeView(QWidget):
             self._range.unlock()
             self._range.blockSignals(False)
         limits = self._field_metadata.get(self._scalar, {}).get('limits')
+        positive = bool(self._field_metadata.get(self._scalar, {}).get('log'))
         try:
             auto = (tuple(float(v) for v in limits[:2]) if limits
-                    else _finite_range(self._mesh[self._scalar]))
+                    else _finite_range(self._mesh[self._scalar], positive=positive))
         except Exception:  # noqa: BLE001 - a field PyVista cannot hand back as numbers
             auto = None
         if auto is None:
@@ -538,7 +586,7 @@ class Model3DView(QWidget):
             self._redraw_mpl()
 
     def showEvent(self, event) -> None:  # noqa: N802 - Qt override
-        """Render once the view is on screen, which the timer used to see to."""
+        """Render once the view is on screen."""
         super().showEvent(event)
         if self._plotter is not None:
             QTimer.singleShot(0, self._render)
@@ -563,7 +611,7 @@ class Model3DView(QWidget):
         row.addWidget(QLabel("Depth"))
         # A slider moved puts the new slice into the images already drawn, once
         # per turn of the event loop: redrawing both panels, their colour bars
-        # and the model's percentiles per mouse move is what made a drag stutter.
+        # and the model's percentiles per mouse move makes a drag stutter.
         self._slice_moved = Coalesced(lambda: self._show_slices(), self)
         self._mpl_drawn = None
         self._mpl_scale = None

@@ -30,12 +30,12 @@ TEMCOMPANY_MOMENTS = ("LM+HM", "HM", "LM")
 #: The acquisition protocol records the term as ``UniStd``, and
 #: :func:`_temcompany_uniform_error` prefers that value; this is the fallback for
 #: a project whose protocol file did not travel with it. Two further lines of
-#: evidence put it at 0.03. One survey's protocol states exactly that, and across
-#: 25,485 enabled gates in three projects not one stored error falls below
-#: 0.030000, the smallest sits exactly there, and the distribution piles up just
-#: above it. A quadrature sum cannot go below either of its parts, so a hard
-#: floor at 0.03 with nothing beneath it is what a folded-in 3% looks like, and a
-#: bare scatter, which is free to be arbitrarily small, is not.
+#: evidence put it at 0.03. Protocols state exactly that, and no stored error of
+#: an enabled gate falls below 0.030000: the smallest sits exactly there, and the
+#: distribution piles up just above it. A quadrature sum cannot go below either
+#: of its parts, so a hard floor at 0.03 with nothing beneath it is what a
+#: folded-in 3% looks like, and a bare scatter, which is free to be arbitrarily
+#: small, is not.
 #:
 #: :func:`PyHydroGeophysX.inversion.em1d._tdem_uncertainty` subtracts this from
 #: the uniform error the inversion asks for, so the two do not stack.
@@ -70,8 +70,8 @@ SOUNDING_CONTAINER_KIND = "em_soundings"
 def is_temcompany_source(path: str) -> bool:
     """Return whether *path* looks like a TEMcompany/TEM2Go export.
 
-    Complete project directories, under either the ``project.tiw`` layout that
-    TEMImage 3 writes or the ``project.db`` one earlier releases wrote, and the
+    Complete project directories, under either the ``project.tiw`` layout of
+    TEMImage 3 or the ``project.db`` layout of earlier releases, and the
     self-describing ``*.xyz`` exports are all accepted. So is an acquisition
     folder holding the instrument's own ``.stb`` raw stream, which needs no
     import to be read.
@@ -315,24 +315,22 @@ def _geometric_layer_thicknesses(
 #: Reference resistivity for the default depth scale, in ohm-m.
 #:
 #: The scale below needs a resistivity before the ground has been inverted for
-#: one. Estimating it from the data was tried and dropped: our own operator
-#: reproduces the late-time dependence on resistivity well (an exponent of
-#: -1.4904 against the theoretical -1.5) but not on time (-3.08 against -2.5),
-#: and a single power law leaves 20% residual over the window, which is not
-#: solid enough to read a resistivity off one gate. A fixed reference is honest
-#: about that, and the calibration below absorbs it.
+#: one. It is not estimated from the data: a single late-time power law leaves
+#: about 20% residual over the window, which is not solid enough to read a
+#: resistivity off one gate. A fixed reference is honest about that, and the
+#: calibration below absorbs it.
 _DEPTH_SCALE_RESISTIVITY = 100.0
 
 #: How much of the diffusion depth at the latest gate the default model spans.
 #:
 #: The diffusion depth ``sqrt(2 rho t / mu0)`` is the natural length scale of a
 #: transient, but it is not a resolved depth: it keeps growing while the signal
-#: sinks into the noise. Measured over three ground TDEM surveys sharing one
-#: instrument, the depth of investigation reached 0.246 of the diffusion depth at
-#: the 90th percentile, and the median sat between 0.065 and 0.197. So the ratio
-#: is not a constant, and a default has to clear the top of that range rather
-#: than sit at its middle. 0.6 leaves roughly a factor of two over the deepest
-#: value measured.
+#: sinks into the noise. For ground TDEM data the depth of investigation is a
+#: fraction of the diffusion depth that varies from survey to survey: medians
+#: between about 0.065 and 0.2, and about 0.25 at the 90th percentile. So the
+#: ratio is not a constant, and a default has to clear the top of that range
+#: rather than sit at its middle. 0.6 leaves roughly a factor of two over the
+#: largest value expected.
 #:
 #: Erring deep is the safe direction, though not free. A model that stops above
 #: the depth of investigation cannot express structure the data does constrain,
@@ -392,10 +390,9 @@ def _temcompany_stored_thicknesses(
     the file already holds it: each row of the model table stores the thicknesses
     that row was solved on.
 
-    Comparing the two on one project, the rebuilt grid agrees with the stored one
-    to four decimals but not exactly, because the stored values are rounded to
-    two and the shortfall is carried by the deepest layer. Reading avoids having
-    to know that, and stays right if the rule ever changes.
+    A rebuilt grid agrees with the stored one closely but not exactly, because
+    the stored values are rounded to two decimals and the shortfall is carried by
+    the deepest layer. Reading the stored grid avoids having to know that rule.
     """
     if int(n_layers) < 2:
         return None
@@ -420,7 +417,7 @@ def _temcompany_stored_thicknesses(
 #: The project's ``InverseSettings`` block stores a number and, beside it, a
 #: mode. When the mode reads ``"Auto"`` the stored number is inert and a default
 #: applies instead, so reading only the number reports a constraint the survey
-#: never ran under. The gap is not small: one project stores
+#: never ran under. The gap is not small: a project can store
 #: ``LcRefDistance = 10.0`` and ``LcAutoScalePower = 1.0`` while the run used
 #: 50.0 and 0.75.
 TEMCOMPANY_AUTO_SETTINGS: Dict[str, float] = {
@@ -456,8 +453,8 @@ def _temcompany_inversion_defaults(con: sqlite3.Connection) -> Dict[str, Any]:
     TEMImage 3 stores the solver input itself, so the settings a run used can be
     read rather than reconstructed; see
     :func:`PyHydroGeophysX.data_processing.temcompany_project.read_inversion_defaults`.
-    The block below is the older path, which reads a settings blob whose numbers
-    are sometimes inert.
+    The block below handles the older layout, which stores a settings blob whose
+    numbers are sometimes inert.
     """
     from_solver = temcompany_project.read_inversion_defaults(con)
     if from_solver:
@@ -499,10 +496,10 @@ def _temcompany_inversion_defaults(con: sqlite3.Connection) -> Dict[str, Any]:
             "last_depth": last_depth,
             "starting_resistivity": float(
                 inverse.get("ManualStartModelResistivity", 40.0) or 40.0),
-            # ``StartModelMode`` reads "Auto" on every project seen so far, in
-            # which case the manual resistivity above is a fallback the
-            # recorded run never used. Reported so a caller can switch on it
-            # rather than silently starting somewhere else.
+            # ``StartModelMode`` usually reads "Auto", in which case the manual
+            # resistivity above is a fallback the recorded run never used.
+            # Reported so a caller can switch on it rather than silently
+            # starting somewhere else.
             "start_model_mode": str(inverse.get("StartModelMode", "") or ""),
             "smoothness": float(inverse.get("VerticalSmoothness", 2.0)),
             "lateral_smoothness": float(inverse.get("LateralSmoothness", 1.3)),
@@ -516,10 +513,8 @@ def _temcompany_inversion_defaults(con: sqlite3.Connection) -> Dict[str, Any]:
             # ``LcAutoScale`` switches on the distance fall-off of the lateral
             # constraint, and the exponent sits beside it as a number. Both are
             # about the separation between soundings, so nothing here scales
-            # with the layer count. An earlier reading multiplied the lateral
-            # weight by sqrt(n_layers) whenever the switch was on, which on a
-            # 20-layer model tied neighbours 4.5 times too tightly and returned
-            # a section smoother along the line than the data asks for.
+            # with the layer count: the lateral weight is not multiplied by
+            # sqrt(n_layers), which would tie neighbours too tightly.
             "lateral_weight_scale": 1.0,
             # The penalty between neighbours scales as
             # (reference_distance / separation) ** this. The switch being off
@@ -564,7 +559,7 @@ def _temcompany_protocol(folder: Path) -> Dict[str, Any]:
     from a default that happens to match this one. ``LM_StackSize`` /
     ``HM_StackSize`` are the transient counts, which an absolute noise model
     would need. ``ChA_WinFunc`` and ``ChA_GateOverlap`` describe the gate taper,
-    which the forward now applies: the same description is in the project
+    which the forward applies: the same description is in the project
     database as ``GateShape`` and ``GateShapePar1``, and it is read from there
     rather than from here so that a project copied without its protocol still
     gets it. See ``GATE_WINDOWS`` in ``forward.tdem_forward``.
@@ -646,11 +641,10 @@ def _temcompany_transmitter(spec: Dict[str, Any], moment: str) -> Dict[str, Any]
 
     ``{moment}WaveformPeriod`` is the half-period of the bipolar cycle, 400 us
     for the low moment and 800 us for the high one on a TEM2Go. Superposing the
-    earlier pulses of the train matters
-    only matters once a gate sits an appreciable fraction of a half-period after
-    turn-off. On one 929-station survey the latest gate surviving quality
-    control was 95.5 us against an 800 us half-period, so the correction was
-    below the noise there; on a quiet site holding late gates it is not.
+    earlier pulses of the train only matters once a gate sits an appreciable
+    fraction of a half-period after turn-off. With a latest gate near 100 us
+    against an 800 us half-period the correction is below the noise; on a quiet
+    site holding late gates it is not.
 
     ``GateShape`` and ``GateShapePar1`` describe the window each gate is
     integrated over: the shape, and its total tapered fraction. The integral
@@ -658,9 +652,9 @@ def _temcompany_transmitter(spec: Dict[str, Any], moment: str) -> Dict[str, Any]
     with a cubic Hermite rule; see
     :func:`PyHydroGeophysX.forward.tdem_forward._gate_integration_operator`.
 
-    ``{moment}_GateTimeShift`` offsets every gate time. It is zero in every
-    project seen so far, and it is read rather than assumed so that a project
-    which sets it is not silently modelled at the wrong times.
+    ``{moment}_GateTimeShift`` offsets every gate time. It is normally zero, and
+    it is read rather than assumed so that a project which sets it is not
+    silently modelled at the wrong times.
     """
     times = np.asarray(spec.get(f"{moment}WaveformTime", []), dtype=float).ravel()
     currents = np.asarray(spec.get(f"{moment}WaveformAmplitude", []),
@@ -756,20 +750,18 @@ def _temcompany_system(spec: Dict[str, Any], row: Optional[sqlite3.Row] = None) 
     The transmitter-receiver separation comes from the station rather than from
     the spec wherever the station records one. The spec states a single nominal
     layout, ``RxCoilXYZPos`` at 15 m on a TEM2Go, while the measured column
-    spans 11.58 to 17.63 m over one survey, so it is a per-station quantity and
+    varies by several metres along a survey, so it is a per-station quantity and
     is read as one. Of the three recorded columns
     only ``RxTxDistance`` is the edited one: ``RxTxDistanceBField`` carries
     zeros where the field estimate did not converge, and
     ``RxTxDistanceGPSBased`` carries GPS scatter.
 
-    ``data_factor`` is recorded and never applied. Measured over 882 stations
-    and 4,884 gates of one project, the inversion inputs the project stores
-    (``InversionModel.Datasets.InputData``) are identical to the stored
-    ``VoltageValues`` with a ratio of exactly 1.000000 and no variance, while
-    ``LM_DataFactor`` is 1.05 and ``HM_DataFactor`` is 1.08. The calibration is
-    therefore already inside the stored voltages, and applying it here would
-    introduce a 5 to 8 percent error that an inversion would absorb into
-    resistivity.
+    ``data_factor`` is recorded and never applied. The inversion inputs a
+    project stores (``InversionModel.Datasets.InputData``) equal the stored
+    ``VoltageValues`` exactly, although ``LM_DataFactor`` and ``HM_DataFactor``
+    differ from 1 (for example 1.05 and 1.08). The calibration is therefore
+    already inside the stored voltages, and applying it here would introduce a
+    5 to 8 percent error that an inversion would absorb into resistivity.
     """
     area = float(spec.get("TxLoopArea", 0.0) or 0.0)
     xy = np.asarray(spec.get("TxLoopXYlength", []), dtype=float).ravel()
@@ -796,7 +788,7 @@ def _temcompany_system(spec: Dict[str, Any], row: Optional[sqlite3.Row] = None) 
         "tx_rx_sep": float(sep),
         # ``height`` stays the single number the rest of the pipeline reads.
         # The two below let a caller that cares place the loop and the coil
-        # independently; they are equal on every TEM2Go project seen so far.
+        # independently; they are normally equal on a TEM2Go.
         "height": float(rx_height),
         "rx_height": float(rx_height),
         "tx_height": float(tx_height),
@@ -908,7 +900,7 @@ def _temcompany_forward_metadata(
         "response_sign": system.get("response_sign"),
         "data_scale": system.get("data_scale"),
         # Recorded so a reader can see it was read and deliberately not applied;
-        # see _temcompany_system for the measurement behind that.
+        # see _temcompany_system for why.
         "data_factor_applied": False,
         "moments": per_moment,
         "protocol": dict(protocol),
@@ -961,10 +953,9 @@ def clear_temcompany_caches() -> None:
 def _stb_survey(folder: Path, settings: "temcompany_stb.ProcessingSettings") -> Dict[str, Any]:
     """An acquisition folder's station stacks, decoded once per raw stream.
 
-    Every station of a line inversion reads the folder, and a read decoded,
-    filtered and stacked the whole stream again: 1.3 s per station on a
-    575-station TEM2Go day, so the line spent over twelve minutes reading
-    before it inverted anything. Keyed on each stream file's size and
+    Every station of a line inversion reads the folder, and decoding,
+    filtering and stacking the whole stream again for each would leave the line
+    reading for longer than it inverts. Keyed on each stream file's size and
     modification time, so a stream rewritten between reads is decoded again.
     """
     streams = temcompany_stb.find_stb_files(folder)
@@ -986,9 +977,9 @@ def _sounding_table(path: str) -> np.ndarray:
     The table holds a whole survey side by side and a read returns one column
     of it, so every caller that walks the soundings - the studio registering
     the survey, a run storing its input, a line inversion reading its
-    stations - used to parse the whole file once per sounding: 38 s per
-    station change on a 3000-sounding table. Keyed on the file's size and
-    modification time, so a table rewritten between reads is parsed again.
+    stations - would otherwise parse the whole file once per sounding. Keyed on
+    the file's size and modification time, so a table rewritten between reads
+    is parsed again.
     The cached array is read-only; callers get copies of its columns.
     """
     source = Path(path)
@@ -1024,9 +1015,8 @@ def _temcompany_survey(path: Path) -> "tuple[Dict[Any, Dict[str, Any]], List[Any
 
     Every station of a line inversion asks for the same three things, and the
     settings are the expensive one on a TEMImage 3 project: they are read out of
-    the solver input the run stored, which is a 1.4 MB JSON blob on a
-    140-station survey. Reading it once per station rather than once per survey
-    was measurable on its own.
+    the solver input the run stored, a JSON blob that can run to megabytes. They
+    are therefore read once per survey rather than once per station.
     """
     specs, rows = temcompany_project.read_survey(path)
     key = temcompany_project.file_key(temcompany_project.project_file(path))
@@ -1051,9 +1041,8 @@ def _load_temcompany_database(path: Path, sounding: int, moment: str,
     specs, all_rows, saved_defaults = _temcompany_survey(path)
     value_key = f"{moment}_VoltageValues"
     # Which stations survive is a property of the survey and the settings, as
-    # in the joint reader below, and was worked out again for every station
-    # asked for: 60 ms a station on a 564-station project, so reading the
-    # survey under one moment took 34 s where LM+HM took 2.
+    # in the joint reader below, so it is worked out once and cached rather
+    # than for every station asked for.
     selection_key = (
         "single", temcompany_project.file_key(temcompany_project.project_file(path)),
         str(moment), bool(use_flags), max_relative_std, gate_rejection,
@@ -1167,9 +1156,8 @@ def _load_temcompany_joint_database(path: Path, sounding: int,
     the deep moment is the only thing that sees deep, so a station stripped of
     its HM keeps its shallow model and loses its depth.
 
-    Which argument wins depends on the survey, so this is off by default. On one
-    929-station survey a ``{"HM": 3}`` floor removed HM from 91 stations, 163
-    gates, and left 7 of them with no data at all.
+    Which argument wins depends on the survey, so this is off by default. A floor
+    such as ``{"HM": 3}`` can leave a station with no data at all.
     """
     gate_rejection = _check_gate_rejection(gate_rejection)
     specs, all_rows, saved_defaults = _temcompany_survey(path)
@@ -1177,9 +1165,9 @@ def _load_temcompany_joint_database(path: Path, sounding: int,
     uniform_error = _temcompany_uniform_error(protocol)
 
     # The gate selection below is a property of the survey and the settings, not
-    # of the station being asked for, and a line inversion asks 140 times for
-    # the same answer. Keyed on the file and on every setting that can change
-    # which gates survive.
+    # of the station being asked for, and a line inversion asks once per station
+    # for the same answer. Keyed on the file and on every setting that can
+    # change which gates survive.
     selection_key = (
         temcompany_project.file_key(temcompany_project.project_file(path)),
         bool(use_flags), max_relative_std, gate_rejection,
@@ -1603,10 +1591,9 @@ def _temcompany_xyz_spec(comments: List[str],
     all that stands between an export and the same forward the project path
     gets.
 
-    It was worth doing rather than leaving the export on a bare step-off. The
-    analog filter alone is 16 to 28 percent of the low moment's early amplitude,
-    and the gate window a further 3 to 6 percent, both measured in
-    ``local_plans/temcompany_forward_alignment.md``.
+    The export is modelled with these rather than as a bare step-off: the analog
+    filter changes the low moment's early amplitude by roughly a fifth, and the
+    gate window by a few percent more.
 
     Two fields are not in the export and come from the ``.sts`` protocol beside
     it: the half-period of the bipolar cycle, without which the repetition
@@ -1858,12 +1845,12 @@ def _load_temcompany_stb(folder: Path, sounding: int, moment: str,
     :mod:`PyHydroGeophysX.data_processing.temcompany_stb`, then presented in the
     shape a project read returns, so everything downstream is unchanged.
 
-    Two differences from a project read are worth stating. Station boundaries
-    are placed by distance travelled and can differ by a record from those an
-    import writes, which moves a station's position by a fraction of the
-    spacing. And there are no in-use flags to honour, because those are written
-    during import, so ``use_flags`` has nothing to act on and gate selection
-    falls to the arguments given here.
+    It differs from a project read in two ways. Station boundaries are placed by
+    distance travelled and can differ by a record from those an import writes,
+    which moves a station's position by a fraction of the spacing. And there
+    are no in-use flags to honour, because those are written during import, so
+    ``use_flags`` has nothing to act on and gate selection falls to the
+    arguments given here.
     """
     settings = temcompany_stb.ProcessingSettings()
     survey = _stb_survey(folder, settings)
@@ -1989,23 +1976,19 @@ def load_temcompany_sounding(
 ) -> Dict[str, Any]:
     """Load a TEMcompany/TEM2Go sounding from a project folder or XYZ export.
 
-    The defaults reproduce the gate selection the project itself records, which
-    was measured rather than assumed. Over 1,503 station-moment datasets of one
-    project, the
+    The defaults reproduce the gate selection the project itself records: the
     gates the stored inversion used (``InversionModel.Datasets``) are exactly
     the gates whose ``InUseFlags`` are set and whose value is finite and not a
-    dummy, with 100 percent agreement. There is no further sign test: 87 low-
-    moment and 251 high-moment datasets keep a non-positive gate. There is no
-    further error cut either, and none is needed, because the largest relative
-    error among the kept gates is exactly 0.250, so an equivalent cut is already
-    reflected in the stored flags. The selection is not even contiguous, so
-    nor truncation: only 36 percent of the high-moment selections
-    are a single run of gates.
+    dummy. There is no further sign test, since stored selections keep
+    non-positive gates. There is no further error cut either, and none is
+    needed, because the stored flags already reflect one. The selection is not
+    contiguous, so truncation does not describe it: most high-moment selections
+    are not a single run of gates.
 
     So ``max_relative_std=None`` and ``reject_negative=False`` are the defaults.
     Both arguments remain, because a survey whose flags were written by an older
-    an older acquisition release, or one being deliberately treated more
-    strictly, still needs them. Note that the sign test only runs when
+    acquisition release, or one being deliberately treated more strictly, still
+    needs them. Note that the sign test only runs when
     ``max_relative_std`` is set: it condemns a gate alongside a noisy one rather
     than on its own.
 
@@ -2185,9 +2168,9 @@ def read_survey(path: str, method: str, *, progress=None,
 
     A project sounding carries the survey's per-station columns (positions,
     coordinates, line numbers, heights) as well as its own gates, so a list of
-    them grows with the square of the station count: 42 MB for 564 TEM2Go
-    stations. Those columns are the same in every sounding, so each one here
-    is the first sounding's array rather than a copy of it.
+    them grows with the square of the station count. Those columns are the same
+    in every sounding, so each one here is the first sounding's array rather
+    than a copy of it.
     """
     head = load_sounding(path, method, sounding=0, **options)
     total = max(1, int(head.get("n_soundings", 1)))
@@ -2223,10 +2206,10 @@ def save_sounding_container(
 ) -> Path:
     """Materialize every sounding in ``path`` into one compressed container.
 
-    A recorded run used to keep its input by copying the acquisition folder,
-    which for a TEMcompany project is hundreds of megabytes per inversion. The
-    soundings themselves are a few hundred kilobytes, and they are the only part
-    the inversion reads, so this parses the survey once and stores the result.
+    Copying the acquisition folder into a recorded run would store hundreds of
+    megabytes per inversion for a TEMcompany project. The soundings are far
+    smaller, and they are the only part the inversion reads, so this parses the
+    survey once and stores the result.
 
     The load settings are baked in, because they decide what the arrays contain:
     a container written for ``LM+HM`` holds joint moments, and re-reading it

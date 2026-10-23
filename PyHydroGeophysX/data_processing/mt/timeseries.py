@@ -391,6 +391,27 @@ class TimeSeriesRun:
             seconds_between(self.start, as_datetime64(end)) * self.sample_rate - 0.01))
         return self.slice(max(first, 0), max(min(last, self.n_samples), max(first, 0)))
 
+    def with_dipole_length(self, component: str, length_m: float) -> "TimeSeriesRun":
+        """The run with electric channel ``component`` read as a dipole of ``length_m`` metres.
+
+        For a dipole that changed during a recording. When one electrode of a
+        line laid out about a ground electrode breaks off, the receiver goes on
+        measuring the other arm against the ground electrode, half the line:
+        window the run at the break and give the part after it the shorter length.
+        """
+        name = normalize_component(component)
+        channel = self[name]
+        dipoles = [k for k, stage in enumerate(channel.response) if stage.name.startswith("dipole_")]
+        if channel.kind != "electric" or not dipoles:
+            raise ValueError(f"{name} has no dipole in its response to change")
+        if not float(length_m) > 0:
+            raise ValueError("length_m must be positive")
+        response = list(channel.response)
+        response[dipoles[0]] = dipole_stage(float(length_m))
+        channels = dict(self.channels)
+        channels[name] = replace(channel, response=response, dipole_length=float(length_m))
+        return replace(self, channels=channels, metadata=dict(self.metadata))
+
     def calibrated(self, components: Optional[Sequence[str]] = None, *,
                    band: Optional[Tuple[float, float]] = None) -> "TimeSeriesRun":
         """The channels in field units (mV/km, nT), the response removed by FFT.

@@ -1,13 +1,13 @@
 """Reading a TEMcompany project, whichever of its two file layouts it uses.
 
-TEMImage rewrote its project file. Releases up to 2026 wrote ``project.db``,
-whose tables are ``RawStackData``, ``StationStackData``, ``InversionModel``,
-``RxTxSpecs``, ``SurveyLines`` and ``UserSettingsJson``. TEMImage 3 writes
-``project.tiw`` instead, with ``Data``, ``StationStacks``, ``StationModelTable``,
-``ProtocolTable``, ``LineTable`` and ``InversionRunTable``. Both are SQLite, and
-they carry the same survey; almost every difference is a renaming, a
-normalisation of a JSON blob into columns, or a change of sign convention on one
-flag array.
+TEMImage writes its project file in one of two layouts. Releases before
+TEMImage 3 write ``project.db``, whose tables are ``RawStackData``,
+``StationStackData``, ``InversionModel``, ``RxTxSpecs``, ``SurveyLines`` and
+``UserSettingsJson``. TEMImage 3 writes ``project.tiw`` instead, with ``Data``,
+``StationStacks``, ``StationModelTable``, ``ProtocolTable``, ``LineTable`` and
+``InversionRunTable``. Both are SQLite, and they carry the same survey; almost
+every difference is a renaming, a normalisation of a JSON blob into columns, or
+a change of sign convention on one flag array.
 
 This module is the one place that knows about the difference. It reads either
 file and returns the survey in the older shape: a ``RxTxSpecs``-style spec dict
@@ -16,41 +16,35 @@ reader in :mod:`PyHydroGeophysX.data_processing.em1d` and
 :mod:`PyHydroGeophysX.data_processing.temcompany_reference` goes through it, so
 those modules keep one code path rather than two.
 
-Translating towards the older shape rather than the newer one is deliberate. The
-older shape is what the gate-selection, forward and inversion code was measured
-against, over 882 inverted stations of one survey, and that measurement is
-recorded in ``local_plans/temcompany_forward_alignment.md``. Moving the whole
-pipeline onto new key names would put that evidence out of reach for no gain,
-since the two describe the same instrument.
+The older shape is the one translated to, rather than the newer one, because the
+gate-selection, forward and inversion code is written against it, and the two
+layouts describe the same instrument.
 
-Four differences are more than a renaming and are worth stating.
+Four differences are more than a renaming.
 
 ``StationStacks`` holds one row per station and moment, keyed by
 ``TransmitterMoment`` (0 for the low moment, 1 for the high), where
-``StationStackData`` held one row per station with ``LM_`` and ``HM_`` column
+``StationStackData`` holds one row per station with ``LM_`` and ``HM_`` column
 pairs. The rows are pivoted back into pairs here.
 
-The in-use flag changed sense and meaning. ``InUseFlags`` was 1 for a gate the
-inversion used. ``Filtered`` is 0 for a gate the inversion used and otherwise a
-bitmask naming why it was dropped, so a reason survives where before only the
-verdict did. On the Ashton Prairie survey the two agree on every gate once the
-sense is flipped: 2,824 gates with ``Filtered == 0`` against the 2,824 data
-points the inversion log reports. The mask value is kept under ``_FilterReason``
-for a caller that wants it.
+The in-use flag has the opposite sense and a richer meaning. ``InUseFlags`` is 1
+for a gate the inversion used. ``Filtered`` is 0 for a gate the inversion used
+and otherwise a bitmask naming why it was dropped, so the reason is available as
+well as the verdict. With the sense flipped the two flags select the same gates.
+The mask value is kept under ``_FilterReason`` for a caller that wants it.
 
-Gate centre times are gone. ``ProtocolTable`` stores open, centre and close, but
+``ProtocolTable`` stores gate open, centre and close times, but
 ``StationModelTable.ModelData`` stores only open and close. The centre is the
-geometric mean of the two, which reproduces the stored ``ProtocolTable`` centres
-to 7e-8 relative on both moments of this instrument, so it is computed rather
-than looked up.
+geometric mean of the two, which matches the stored ``ProtocolTable`` centres,
+so it is computed rather than looked up.
 
-The saved inversion settings moved from a free-form ``UserSettingsJson`` blob to
-the actual solver input. ``InversionRunTable.InversionInput`` is the JSON that
-was handed to the Lupus inversion, layer grid, starting model, vertical and
-lateral constraint weights and all, and ``InversionOutput`` is what came back.
-That removes the guesswork in the older path, where a setting reading "Auto"
-meant the stored number was inert and a default applied instead. See
-:func:`read_inversion_defaults`.
+The saved inversion settings are a free-form ``UserSettingsJson`` blob in the
+older file and the actual solver input in the newer one.
+``InversionRunTable.InversionInput`` is the JSON that was handed to the Lupus
+inversion, layer grid, starting model, vertical and lateral constraint weights
+and all, and ``InversionOutput`` is what came back. The older blob needs
+guesswork: a setting reading "Auto" means the stored number is inert and a
+default applies instead. See :func:`read_inversion_defaults`.
 
 Nothing here executes anything. It parses a database the acquisition software
 wrote.
@@ -72,10 +66,9 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 #:
 #: The workspace file comes first because a project migrated from the older
 #: release keeps its ``project.db`` beside the new one, and that copy is stale:
-#: on the Ashton Prairie project the leftover ``project.db`` carries the
-#: transients but zero rows in ``InversionModel``, while ``project.tiw`` holds
-#: the inversion. Preferring the older file would silently report a survey as
-#: never inverted.
+#: it carries the transients but no rows in ``InversionModel``, while
+#: ``project.tiw`` holds the inversion. Preferring the older file would silently
+#: report a survey as never inverted.
 PROJECT_FILE_NAMES: Tuple[str, ...] = ("project.tiw", "project.db")
 
 #: Project file suffixes, same order and same reason.
@@ -168,9 +161,8 @@ def _json_array_length(value: Any) -> int:
 
     The gate arrays in a project file are flat lists of numbers, so the count is
     one more than the number of commas. Counting rather than decoding matters
-    because a line inversion asks for the same station stacks once per station:
-    on a 140-station survey the decode-and-re-encode round trip this replaces
-    was 5 s of an 89 s run.
+    because a line inversion asks for the same station stacks once per station,
+    and a decode-and-re-encode round trip for each would add up.
     """
     if not isinstance(value, str):
         return len(_json_list(value))
@@ -258,11 +250,10 @@ def project_summary(path: str | Path) -> Dict[str, Any]:
     """Enough about one project file to choose between two of them.
 
     Station and inversion counts rather than a file size, because two files in
-    a folder differ in what they hold rather than in how big they are: on one
-    survey ``project.tiw`` carries 140 stations and ``project2.tiw`` a
-    reprocessing of the same day at 529. A file that cannot be opened is
-    reported with its error rather than raising, since the caller is building a
-    list and one bad entry should not empty it.
+    a folder differ in what they hold rather than in how big they are: one can
+    be a reprocessing of the same day with a different number of stations. A
+    file that cannot be opened is reported with its error rather than raising,
+    since the caller is building a list and one bad entry should not empty it.
     """
     target = Path(path)
     summary: Dict[str, Any] = {
@@ -276,9 +267,9 @@ def project_summary(path: str | Path) -> Dict[str, Any]:
         return summary
     try:
         summary["layout"] = schema_of(connection)
-        # A project folder can hold databases that are not projects: one survey
-        # keeps a per-day acquisition file beside project.db. The table check is
-        # what separates them, so a chooser can leave those out.
+        # A project folder can hold databases that are not projects, such as a
+        # per-day acquisition file beside project.db. The table check is what
+        # separates them, so a chooser can leave those out.
         summary["is_project"] = not missing_survey_tables(connection)
         if summary["is_project"]:
             table = ("StationStacks" if summary["layout"] == WORKSPACE_SCHEMA
@@ -402,8 +393,8 @@ def _workspace_spec(row: Any, epsg: Any, latitude: Any) -> Dict[str, Any]:
     spec["GateShape"] = _row_get(row, "GateShapeChannelA")
     spec["GateShapePar1"] = _row_get(row, "GateShapeChannelAParameter1")
     spec["LPFilter_1order"] = _doubles(_row_get(row, "FilterCutOffs"))
-    # Recorded empty in every project seen under either layout, and kept so a
-    # caller reading the spec finds the same keys it found before.
+    # Empty in both layouts, and kept so a caller reading the spec finds the
+    # same keys under either.
     spec["LowPassFilterRxCoil"] = []
     spec["LowPassFilterRxInst"] = []
     spec["TxLoopArea"] = _row_get(row, "TxCoilArea")
@@ -625,10 +616,9 @@ def read_survey(path: str | Path
                 ) -> Tuple[Dict[Any, Dict[str, Any]], List[Any]]:
     """The specs and station stacks of a project, parsed once per file.
 
-    A line inversion reads one station at a time, and every one of those reads
-    used to reopen the project and parse every station in it. On a 140-station
-    survey that was 7 s of an 89 s run, and the cost grows with the square of
-    the survey, so a 929-station project pays it in minutes.
+    A line inversion reads one station at a time, and reopening the project to
+    parse every station on each read would cost time that grows with the square
+    of the survey size. The parsed survey is therefore kept in a cache.
 
     The result is cached on :func:`file_key`, so a project rewritten between
     calls is reparsed. Callers must treat what comes back as read-only: they all
@@ -943,9 +933,9 @@ def read_run_record(con: sqlite3.Connection,
 def read_inversion_defaults(con: sqlite3.Connection) -> Dict[str, Any]:
     """The settings a stored run actually used, read from the solver input.
 
-    The older layout stored a settings blob whose numbers could be inert: a
-    setting reading "Auto" meant a default applied instead, and one project
-    stored a reference distance of 10 m for a run made at 50 m. The newer layout
+    The older layout stores a settings blob whose numbers can be inert: a
+    setting reading "Auto" means a default applies instead, and a project can
+    store a reference distance of 10 m for a run made at 50 m. The newer layout
     stores the solver input itself, so nothing has to be inferred. The layer
     grid, the starting resistivity and the two constraint weights are read off
     the first model position, and the rest off the ``Lupus_Settings`` block that
@@ -990,9 +980,9 @@ def read_inversion_defaults(con: sqlite3.Connection) -> Dict[str, Any]:
         "layer_thicknesses": list(thickness),
         "last_depth": float(sum(thickness)),
         "starting_resistivity": resistivity[0] if resistivity else 40.0,
-        # The newer release picks the starting model from the data on every run
-        # seen, which is what "Auto" meant in the older settings blob. Reported
-        # under the same key so a caller can switch on it either way.
+        # The newer release picks the starting model from the data, which is
+        # what "Auto" means in the older settings blob. Reported under the same
+        # key so a caller can switch on it either way.
         "start_model_mode": "Auto",
         "smoothness": vertical[0] if vertical else 2.0,
         "lateral_smoothness": lateral[0] if lateral else 1.3,

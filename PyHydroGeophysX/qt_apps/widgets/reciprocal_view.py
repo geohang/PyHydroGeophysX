@@ -4,8 +4,7 @@ A reading and its reciprocal - current and potential electrodes exchanged -
 measure the same resistance, so the difference between them is an error the
 data measured themselves. The tab draws every pair at its mean resistance and
 that difference, on log axes, with the error model fitted through them: one
-survey's pairs, or a time-lapse series' pairs coloured first survey to last,
-as Craig Ulrich draws his.
+survey's pairs, or a time-lapse series' pairs coloured first survey to last.
 
 The plot is on the left and its options in a column on the right, as on the
 Resistivity model and Mesh tabs. "Fit to" decides which pairs the model is

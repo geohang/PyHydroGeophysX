@@ -602,7 +602,7 @@ def _equation(fit: Mapping[str, Any]) -> str:
 
 
 def power_law(fit: Mapping[str, Any]) -> str:
-    """The model as Craig Ulrich's QC logs write it: ``dR = 10^b * R^m``."""
+    """The model in power-law form, as the QC logs write it: ``dR = 10^b * R^m``."""
     return f"dR = 10^{float(fit['b']):.4f} * R^{float(fit['m']):.4f}"
 
 
@@ -723,8 +723,8 @@ def qc_threshold_rows(qc: Mapping[str, Any]) -> List[Tuple[str, str]]:
 
 def file_pair_lines(files: Mapping[str, Any], pairing: Mapping[str, Any],
                     indent: str = "") -> List[str]:
-    """A survey's forward and reciprocal files, as Craig Ulrich's parsed
-    summary lists them: each file, the status, and the readings of each.
+    """A survey's forward and reciprocal files, as the parsed summary of the
+    QC log lists them: each file, the status, and the readings of each.
 
     ``files`` is what the page recorded when it merged them: ``forward`` and
     ``reciprocal`` (names; no reciprocal for an unpaired forward file) with
@@ -792,7 +792,7 @@ def survey_qc_log(name: str, report: Mapping[str, Any], *, heading: Sequence[str
     filtered: ``readings``, ``pairing``, ``checks`` and ``kept``; for a survey
     written as two files, ``files`` (:func:`file_pair_lines`); and when its
     pairs were averaged, ``averaged`` (``pairs``, ``removed``), logged as
-    check 0 the way Craig Ulrich's logs do.
+    check 0.
     """
     rows = []
     number = 0
@@ -881,8 +881,8 @@ def write_series_qc_logs(folder: Path, index: int, total: int, source: str,
                          report: Mapping[str, Any], *, acquired: str = "",
                          reader: str = "", model: str = "", fit_to: str = FIT_ALL) -> Path:
     """One survey's QC log of a time-lapse series, in ``qc/``. ``model`` is
-    the reciprocal error model line put at its top, as Craig Ulrich's logs
-    carry it; ``fit_to`` the pairs the survey's own fit is over."""
+    the reciprocal error model line put at its top; ``fit_to`` the pairs the
+    survey's own fit is over."""
     heading = [f"Survey {index + 1} of {total}" + (f", acquired {acquired}" if acquired else "")]
     if reader:
         heading.append(f"Read as {reader}")
@@ -1023,8 +1023,8 @@ def module_dict(parts: Sequence[str], name: str) -> Dict[str, Any]:
             if not isinstance(node.value, ast.Dict):
                 return {}
             # Entry by entry: one value naming a constant (DEFAULT_TL's
-            # figure_max_panels) used to make the whole dict unreadable, and
-            # the settings file then marked no time-lapse default at all.
+            # figure_max_panels) must not make the whole dict unreadable, or
+            # the settings file would mark no time-lapse default at all.
             try:
                 return {ast.literal_eval(key): _literal(value, constants)
                         for key, value in zip(node.value.keys, node.value.values)

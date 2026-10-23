@@ -61,7 +61,7 @@ automatic detection when there is one of each in the folder.
   runs without its FIR filter.
 - Check editable loop area, separation and height: these affect calculations.
 - Keep the original raw folder; saved runs reference it rather than copying it.
-  The initial line limit is **200 soundings**; increase it for larger surveys.
+  **Max soundings** is "all" by default; set a number only for a quick test.
 
 ## Optional line geometry
 

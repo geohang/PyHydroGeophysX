@@ -86,8 +86,8 @@ _register(
     lambda g: _ymd_hms(*g),
 )
 # Each ambiguous layout is registered once per reading, the day-first one right
-# after its rival, so a lone string still reads the way it always did and only a
-# whole set of names (see _timestamps_by_pattern) can choose between them.
+# after its rival, so a lone string reads with the first and only a whole set
+# of names (see _timestamps_by_pattern) can choose between them.
 _DASHED_DATETIME = (r"(?<!\d)(\d{2})[-_.](\d{2})[-_.](\d{4})[T_ -]+(\d{2})[:_.h-]?(\d{2})"
                     r"(?:[:_.-]?(\d{2}))?(?!\d)")
 _SHORT_DATETIME = r"(?<!\d)(\d{2})(\d{2})(\d{2})[T_ -](\d{2})(\d{2})(\d{2})?(?!\d)"
@@ -738,8 +738,8 @@ def survey_timing(files: Sequence[str], *, allow_header: bool = True,
 def _source_of(origins: Sequence[str]) -> str:
     """The set's ``source``: ``file names``, ``file names + headers``, ...
 
-    Unchanged from the single-source wording it always had, so a set dated by
-    one kind of source reads as it did.
+    A set dated by one kind of source gets that source's plain wording; a set
+    dated by several joins their short names.
     """
     whole = {FROM_NAME: "file names", FROM_HEADER: "file headers",
              FROM_MTIME: "file modification times"}
@@ -804,8 +804,8 @@ def reciprocal_pairs(files: Sequence[str],
     pairs: List[Tuple[int, int]] = []
     taken: set = set()
 
-    # Forward files by name, looked up rather than searched: a 420-survey
-    # series is 840 files.
+    # Forward files by name, looked up rather than searched: a long series
+    # holds hundreds of files.
     forwards: Dict[Tuple[str, ...], List[int]] = {}
     for i, (words, is_recip) in enumerate(names):
         if not is_recip:

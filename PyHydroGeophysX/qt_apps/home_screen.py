@@ -308,7 +308,7 @@ class StudioHome(QWidget):
         self._body.addWidget(self._build_hero())
 
         self._body.addWidget(_label("Explore your research tasks", "HomeSection"))
-        # A group the navigator no longer has drops its card, not the studio.
+        # A group missing from the navigator drops its card, not the studio.
         cards = [self._task_card(*task) for task in LOOP_TASKS if _group_pages(task[-1])]
         self._body.addWidget(_AdaptiveGrid(cards, 245, 3))
 

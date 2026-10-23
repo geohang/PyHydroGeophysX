@@ -1,11 +1,11 @@
 """The plain-text records a studio run leaves for the people who review it.
 
-A run folder already held what a program needs to repeat the run: the recipe
-and the rerun script. What a person checking the run asks for was missing or
-scattered - the log as it scrolled past in the window (gone with the session),
-the settings in one readable place, and what the data QC removed. This module
-writes those as text and lists them, so the page that ran the run and Saved
-Results offer the same files.
+A run folder holds what a program needs to repeat the run: the recipe and the
+rerun script. What a person checking the run asks for is different and would
+otherwise be scattered - the log as it scrolled past in the window (gone with
+the session), the settings in one readable place, and what the data QC
+removed. This module writes those as text and lists them, so the page that ran
+the run and Saved Results offer the same files.
 
 Qt-free on purpose. The page side - which lines belong to which run, and when a
 run's log is complete - is in ``modules/base.py``.
@@ -44,7 +44,7 @@ ERROR_PAIRS_NAME = "reciprocal_error_pairs.npz"
 QC_FOLDER = "qc"
 #: The logs carry chi2, lambda and ohm as the window shows them (χ², λ, Ω).
 #: UTF-8 with its byte-order mark, which every Windows editor and shell reads
-#: as UTF-8; without it Notepad's older versions and PowerShell 5 showed
+#: as UTF-8; without it Notepad's older versions and PowerShell 5 show
 #: "Ï‡Â²". Appending writes the mark only into an empty file.
 LOG_ENCODING = "utf-8-sig"
 

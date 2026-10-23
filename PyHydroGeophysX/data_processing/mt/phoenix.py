@@ -1,3 +1,31 @@
+# The bit assignments and gain values in _board_gain and _low_pass are those of
+# PhoenixGeoPy and of mth5's Phoenix reader, which implement the same rules.
+# Both are distributed under the MIT licence, below. PyHydroGeophysX's changes
+# are under the package's Apache-2.0 licence.
+#
+# MIT License
+#
+# Copyright (c) 2021 Phoenix Geophysics Ltd. (PhoenixGeoPy)
+# Copyright (c) 2020 JP (mth5)
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 """Phoenix Geophysics MTU-5C, MTU-5P, MTU-8A, RXU-8A and MTU-2C recordings.
 
 A recording is a folder ``<serial>_<yyyy-mm-dd-hhmmss>`` holding
@@ -13,9 +41,9 @@ each folder holds. Each folder has the channel's files, fragmented in time:
   bursts each with its own 32-byte subheader (GPS time stamp, sample count).
 
 All of them start with the 128-byte header of Phoenix's specification, which
-this reader follows; the hardware-configuration bits that set a board's
-gains, which the specification leaves undocumented, are decoded in
-:func:`_board_gain`.
+this reader follows. The hardware-configuration bytes of that header set a
+board's gains and low-pass corner; :func:`_board_gain` and :func:`_low_pass`
+read them with the rules of PhoenixGeoPy (Phoenix Geophysics, 2021) and mth5.
 
 Samples come out in volts at the instrument input: native counts are scaled
 by the A/D converter's +-5 V over 2^23 and divided by the board's total gain,
@@ -375,8 +403,9 @@ def read_phoenix(path: Any, *, sample_rate: Union[None, float, Sequence[float]] 
     (which reads that file's stream, every channel of it). ``sample_rate``
     picks the stream(s) - 24000 for the native ``.bin`` or a decimated rate;
     by default every rate present is read, highest first.
-    ``start`` and ``end`` (UTC) limit what is read, which matters for long
-    native recordings. ``calibration`` is a calibration file, a folder of them
+    ``start`` and ``end`` (UTC) limit what is read: files wholly outside them
+    are not loaded, which matters for long recordings (a day of 24 kHz bursts
+    is gigabytes). ``calibration`` is a calibration file, a folder of them
     (searched through) or a list; by default ``*rxcal.json``, ``*scal.json``
     and binary ``*.scal`` files are looked for in the recording folder and the
     two above it, and in any folder there named for calibrations.
@@ -451,10 +480,13 @@ def read_phoenix(path: Any, *, sample_rate: Union[None, float, Sequence[float]] 
             for item in paths:
                 header = headers[item]
                 period = float(header["fragment_period"] or 0)
-                if native and period and (start_limit is not None or end_limit is not None):
-                    begin = shifted(start_utc, header["file_sequence"] * period)
+                if period and (start_limit is not None or end_limit is not None):
+                    # A native file's sequence counts from 0, a decimated one's from 1; the
+                    # minute's margin each side covers the leap seconds and stamp offsets.
+                    sequence = int(header["file_sequence"]) - (0 if native else 1)
+                    begin = shifted(start_utc, sequence * period - 60.0)
                     if (end_limit is not None and begin >= end_limit) or (
-                            start_limit is not None and shifted(begin, period) <= start_limit):
+                            start_limit is not None and shifted(begin, period + 120.0) <= start_limit):
                         continue
                 if native:
                     found, count = _native_blocks(item, header, start_utc, _AD_RANGE_VOLTS / 2**23 / gain)

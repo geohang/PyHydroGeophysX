@@ -1,6 +1,6 @@
-"""Robust ERT file loading for the desktop studio (Qt-free).
+"""ERT file loading for the desktop studio (Qt-free).
 
-A single source of truth for turning an ERT data file into a pygimli
+The one place that turns an ERT data file into a pygimli
 ``DataContainerERT`` with correct geometry, topography, and apparent
 resistivity. Both the single-inversion ERT module and the time-lapse pipeline
 use this so they behave identically.
@@ -54,16 +54,136 @@ def analytic_geometric_factors(data) -> np.ndarray:
     """PyGIMLi's analytic geometric factors for ``data``, without its disk cache.
 
     ``createGeometricFactors`` stores every result on disk under a hash of the
-    whole container. For analytic factors, hashing and restoring took longer
-    than computing them (about 20 ms of a 3.7k-reading load), and every survey
-    read added a cache file.
+    whole container. For analytic factors, hashing and restoring cost more than
+    computing them, and every survey read would add a cache file.
     """
     from pygimli.physics import ert as pg_ert
 
+    positions = np.asarray(data.sensorPositions(), dtype=float)
+    if len(positions) and np.ptp(positions[:, 1]) > 1e-9 and np.ptp(positions[:, 2]) > 1e-9:
+        # A 3-D survey on uneven ground. PyGIMLi's factor mirrors every
+        # electrode across a surface at z = 0, so an electrode at z = 211
+        # would get the whole-space factor; the ground is where the electrodes
+        # are, as it is for a profile, whose elevation PyGIMLi keeps in y.
+        return _surface_factors(data, positions)
     try:
         return pg_ert.createGeometricFactors(data, numerical=False, skipCache=True)
     except TypeError:  # a PyGIMLi without the switch
         return pg_ert.createGeometricFactors(data, numerical=False)
+
+
+def _surface_factors(data, positions: np.ndarray) -> np.ndarray:
+    """Half-space factors, 2*pi / (1/AM - 1/BM - 1/AN + 1/BN), from the
+    electrodes' distances in 3-D; a pole (index -1) adds no term."""
+    index = {token: np.asarray(data[token], dtype=int) for token in "abmn"}
+
+    def inverse(current: str, potential: str) -> np.ndarray:
+        i, j = index[current], index[potential]
+        used = (i >= 0) & (j >= 0)
+        out = np.zeros(len(i))
+        distance = np.linalg.norm(positions[i[used]] - positions[j[used]], axis=1)
+        with np.errstate(divide="ignore"):
+            out[used] = 1.0 / distance
+        return out
+
+    total = inverse("a", "m") - inverse("b", "m") - inverse("a", "n") + inverse("b", "n")
+    with np.errstate(divide="ignore", invalid="ignore"):
+        return np.where(np.abs(total) > 0, 2.0 * np.pi / total, 0.0)
+
+
+# ---------------------------------------------------------------------------
+# 3-D surveys
+# ---------------------------------------------------------------------------
+def electrodes_cover_an_area(xy) -> bool:
+    """Whether electrodes at plan positions ``xy`` cover an area rather than a line.
+
+    A line may bend, but it has one electrode at each place along it. Two
+    electrodes side by side across it - under a quarter of a spacing apart
+    along it, more than a spacing apart across - are on two lines or a grid,
+    and so is a layout wider across than two spacings and a fifth of its length.
+    """
+    from scipy.spatial import cKDTree
+
+    xy = np.atleast_2d(np.asarray(xy, dtype=float))[:, :2]
+    if not np.isfinite(xy).all():
+        return False
+    xy = np.unique(np.round(xy, 6), axis=0)
+    if len(xy) < 3:
+        return False
+    centred = xy - xy.mean(axis=0)
+    axes = np.linalg.svd(centred, full_matrices=False)[2]
+    along, across = centred @ axes[0], centred @ axes[1]
+    nearest = cKDTree(xy).query(xy, k=2)[0][:, 1]
+    spacing = float(np.median(nearest))
+    if spacing <= 0:
+        return False
+    if np.ptp(across) > max(2.0 * spacing, 0.2 * float(np.ptp(along))):
+        return True
+    order = np.argsort(along, kind="stable")
+    along, across = along[order], across[order]
+    for i in range(len(along)):
+        j = i + 1
+        while j < len(along) and along[j] - along[i] < 0.25 * spacing:
+            if abs(across[j] - across[i]) > spacing:
+                return True
+            j += 1
+    return False
+
+
+def survey_is_3d(positions, *, named: bool = False) -> bool:
+    """Whether electrodes at ``positions`` (x, y, z) make a 3-D survey.
+
+    PyGIMLi keeps a profile's elevation in y with z at 0, so a y that varies
+    is a plan coordinate only when z varies too, or when ``named`` (a table's
+    header called the columns y and z); the electrodes must then cover an area
+    (:func:`electrodes_cover_an_area`), as a line in a volume is still a
+    profile. On flat ground without names, only a full grid of 3 x 3
+    electrodes or more counts: a profile has one electrode at each x.
+    """
+    positions = np.atleast_2d(np.asarray(positions, dtype=float))
+    if positions.shape[1] < 3 or len(positions) < 4 or not np.isfinite(positions).all():
+        return False
+    y_varies = np.ptp(positions[:, 1]) > 1e-9
+    z_varies = np.ptp(positions[:, 2]) > 1e-9
+    if named or (y_varies and z_varies):
+        return electrodes_cover_an_area(positions[:, :2])
+    if z_varies:
+        return False
+    columns = np.unique(np.round(positions[:, 0], 3)).size
+    rows = np.unique(np.round(positions[:, 1], 3)).size
+    plan = np.unique(np.round(positions[:, :2], 3), axis=0)
+    return columns >= 3 and rows >= 3 and len(plan) == columns * rows == len(positions)
+
+
+def read_electrode_layout(path) -> Tuple[np.ndarray, bool, str]:
+    """``(positions, three_d, how)``: an electrode file's positions as a
+    container holds them - (x, y, z) for a 3-D survey (:func:`survey_is_3d`),
+    PyGIMLi's (x, elevation, 0) for a profile."""
+    from PyHydroGeophysX.data_processing.table_io import (
+        read_electrode_positions, read_electrode_table)
+
+    positions, named, how = read_electrode_positions(path)
+    if survey_is_3d(positions, named=named):
+        return positions, True, how
+    coords, elevation, how = read_electrode_table(path)
+    return np.column_stack([coords[:, 0], elevation, np.zeros(len(coords))]), False, how
+
+
+def electrode_positions(electrodes, three_d: Optional[bool] = None) -> Tuple[np.ndarray, bool]:
+    """``(positions, three_d)``: a reader's electrodes as a container holds them.
+
+    ``three_d`` None decides by :func:`survey_is_3d`; a profile's elevation is
+    :func:`electrode_elevation`.
+    """
+    if not electrodes:
+        return np.zeros((0, 3)), bool(three_d)
+    xyz = np.array([[float(e.x), float(e.y), float(e.z)] for e in electrodes], dtype=float)
+    if three_d is None:
+        three_d = survey_is_3d(xyz)
+    if three_d:
+        return xyz, True
+    return np.column_stack([xyz[:, 0], electrode_elevation(electrodes),
+                            np.zeros(len(xyz))]), False
 
 
 # ---------------------------------------------------------------------------
@@ -107,10 +227,8 @@ def follow_moved_sensors(data, before) -> int:
 
     Returns how many readings changed.
     """
-    from pygimli.physics import ert as pg_ert
-
-    ratio = _geometric_ratio(pg_ert.createGeometricFactors(data, numerical=False),
-                             pg_ert.createGeometricFactors(before, numerical=False))
+    ratio = _geometric_ratio(analytic_geometric_factors(data),
+                             analytic_geometric_factors(before))
     changed = int(np.count_nonzero(np.abs(ratio - 1.0) > 1e-9))
     if changed:
         for token in ("k", "rhoa", "k_file"):
@@ -127,28 +245,27 @@ def place_electrodes(data, electrode_file, log: LogFn = _noop) -> int:
     that cannot be matched is refused rather than applied in part. k and rhoa
     follow the electrodes that moved (:func:`follow_moved_sensors`). This is how
     a file read by PyGIMLi's own reader takes an electrode file, which that
-    reader has no way to be given. Returns how many readings changed.
+    reader has no way to be given. A 3-D survey's electrodes are placed at
+    (x, y, z) (:func:`read_electrode_layout`). Returns how many readings changed.
     """
     import pygimli as pg
 
-    from PyHydroGeophysX.data_processing.table_io import read_electrode_table
-
-    coords, elevation, how = read_electrode_table(electrode_file)
+    positions, three_d, how = read_electrode_layout(electrode_file)
     name = Path(electrode_file).name
     count = int(data.sensorCount())
-    if len(coords) != count:
-        raise ValueError(f"{name} lists {len(coords)} electrodes, but the data file's "
+    if len(positions) != count:
+        raise ValueError(f"{name} lists {len(positions)} electrodes, but the data file's "
                          f"electrode table has {count}.")
     before = pg.DataContainerERT(data)
     for index in range(count):
-        data.setSensorPosition(index, pg.Pos(float(coords[index, 0]), float(elevation[index])))
+        data.setSensorPosition(index, pg.Pos(*(float(v) for v in positions[index])))
     moved = follow_moved_sensors(data, before)
-    log(f"Electrode positions from {name} ({how})"
+    log(f"Electrode positions from {name} ({how}{'; a 3-D survey' if three_d else ''})"
         + (f"; k and rhoa follow them in {moved} readings" if moved else ""))
     return moved
 
 
-def _header_ratio(std, valid) -> Optional[np.ndarray]:
+def _header_ratio(std, valid, three_d: bool = False) -> Optional[np.ndarray]:
     """How much an electrode file changed each reading's half-space k.
 
     ``None`` unless a reader replaced the positions the data file's own header
@@ -165,8 +282,8 @@ def _header_ratio(std, valid) -> Optional[np.ndarray]:
     def factors(rows) -> Optional[np.ndarray]:
         """Half-space k of the ``valid`` readings on electrodes placed at ``rows``."""
         placed = pg.DataContainerERT()
-        elevation = electrode_elevation(rows)
-        index = {int(row.id): int(placed.createSensor(pg.Pos(float(row.x), float(elevation[i]))))
+        positions = electrode_positions(rows, three_d)[0]
+        index = {int(row.id): int(placed.createSensor(pg.Pos(*positions[i])))
                  for i, row in enumerate(rows)}
         if not all(int(getattr(o.quad, key)) in index for o in valid for key in keys):
             return None
@@ -186,7 +303,7 @@ def _header_ratio(std, valid) -> Optional[np.ndarray]:
     return _geometric_ratio(after, before)
 
 
-def standard_to_pg(std):
+def standard_to_pg(std, three_d: Optional[bool] = None):
     """Build a pygimli ``DataContainerERT`` from a ``StandardERT`` for inversion.
 
     Most instrument loaders report transfer resistance (V/I), not apparent
@@ -195,6 +312,9 @@ def standard_to_pg(std):
     used as-is. pygimli's forward operator uses the same ``data["k"]``, so the
     inversion stays self-consistent. Returns ``None`` if pygimli is unavailable
     or no measurement maps onto the electrode set.
+
+    A 3-D survey's electrodes go in at (x, y, z); ``three_d`` None decides
+    from the electrodes (:func:`electrode_positions`).
     """
     try:
         import pygimli as pg
@@ -204,9 +324,10 @@ def standard_to_pg(std):
     data = pg.DataContainerERT()
     id_to_idx = {}
     elecs = std.electrodes or []
-    elev = electrode_elevation(elecs)
+    positions, three_d = electrode_positions(elecs, three_d)
     for i, e in enumerate(elecs):
-        # Elevation goes in y, which is the vertical axis for a 2D problem.
+        # A profile's elevation goes in y, which is the vertical axis for a 2D
+        # problem; a 3-D survey's in z.
         #
         # PyGIMLi's analytic geometric factor mirrors each electrode across a free
         # surface fixed at z = 0. An electrode at z = 0 coincides with its image
@@ -221,9 +342,9 @@ def standard_to_pg(std):
         # createSensor snaps to a sensor already within 1 mm and returns that
         # one's index instead of adding another, so two electrode ids at one
         # position (a repeated row, the shared station of a roll-along) share a
-        # sensor. Every electrode must take the index it returns: counting the
-        # list put each later electrode on the next electrode's position.
-        id_to_idx[int(e.id)] = int(data.createSensor(pg.Pos(float(e.x), float(elev[i]))))
+        # sensor. Every electrode must take the index it returns, not its place
+        # in the list.
+        id_to_idx[int(e.id)] = int(data.createSensor(pg.Pos(*positions[i])))
     keys = ("A", "B", "M", "N")
     valid = [
         o for o in (std.observations or [])
@@ -264,7 +385,7 @@ def standard_to_pg(std):
     # and an apparent resistivity the file reports was formed on the header's
     # geometry. The measured R = rhoa/k does not change with the move, so rhoa
     # and the file's own factors follow k to the new positions.
-    moved = _header_ratio(std, valid) if source != "resistance" else None
+    moved = _header_ratio(std, valid, three_d) if source != "resistance" else None
     if moved is not None:
         vals = vals * moved
     if source == "resistance":
@@ -388,7 +509,7 @@ def container_pseudosection(data) -> np.ndarray:
 
 
 # ---------------------------------------------------------------------------
-# Robust single-file loader
+# Single-file loader with fallbacks
 # ---------------------------------------------------------------------------
 _AUTO_NAMES = ("", "auto", "none", "auto-detect", "auto-detect (pygimli)")
 #: Count-prefixed / device formats tried when native pygimli load comes back empty.
@@ -406,8 +527,8 @@ def _usable(data, log: LogFn = _noop) -> bool:
     """Whether a reader's container is a survey: readings on four electrodes or more.
 
     A reader handed the wrong format can return one electrode and one reading
-    without an error, and a DAS-1 file was "auto-recovered" that way as an E4D
-    survey of one reading (see ``ert_formats.implausible_survey``).
+    without an error, as a DAS-1 file read as an E4D survey of one reading does
+    (see ``ert_formats.implausible_survey``).
     """
     from PyHydroGeophysX.data_processing.ert_formats import implausible_survey
 
@@ -426,14 +547,13 @@ def _usable(data, log: LogFn = _noop) -> bool:
 def _ensure_rhoa(data, log: LogFn = _noop) -> None:
     """Make sure a natively-loaded container has positive apparent resistivity."""
     try:
-        from pygimli.physics import ert as pg_ert
         if data is None:
             return
         have_rhoa = data.haveData("rhoa") and np.any(np.asarray(data["rhoa"], dtype=float) > 0)
         if have_rhoa:
             return
         if not data.haveData("k") or not np.any(np.asarray(data["k"], dtype=float) != 0):
-            data["k"] = pg_ert.createGeometricFactors(data, numerical=False)
+            data["k"] = analytic_geometric_factors(data)
         k = np.asarray(data["k"], dtype=float)
         if data.haveData("r"):
             data["rhoa"] = np.asarray(data["r"], dtype=float) * k
@@ -445,7 +565,8 @@ def _ensure_rhoa(data, log: LogFn = _noop) -> None:
 
 def _via_instrument(path: str, instrument: str, electrode_file: Optional[str],
                     spacing: Optional[float], log: LogFn,
-                    failures: Optional[List[Exception]] = None):
+                    failures: Optional[List[Exception]] = None,
+                    three_d: Optional[bool] = None):
     try:
         from PyHydroGeophysX.data_processing.ert_data_agent import load_ert_resipy
     except Exception as exc:  # noqa: BLE001
@@ -455,7 +576,7 @@ def _via_instrument(path: str, instrument: str, electrode_file: Optional[str],
         with tempfile.TemporaryDirectory(prefix="phgx_resipy_") as proj:
             std = load_ert_resipy(project_dir=proj, data_file=str(path), instrument=instrument,
                                   spacing=spacing, electrode_file=electrode_file)
-            return standard_to_pg(std)
+            return standard_to_pg(std, three_d)
     except Exception as exc:  # noqa: BLE001
         log(f"Instrument '{instrument}' loader error: {exc}")
         if failures is not None:
@@ -485,23 +606,30 @@ def _via_native(path: str, log: LogFn):
 
 def load_ert_container(path: str, instrument: Optional[str] = None,
                        electrode_file: Optional[str] = None,
-                       spacing: Optional[float] = None, log: LogFn = _noop):
-    """Load one ERT file into a pygimli ``DataContainerERT``, robustly.
+                       spacing: Optional[float] = None, log: LogFn = _noop,
+                       survey_3d: Optional[bool] = None):
+    """Load one ERT file into a pygimli ``DataContainerERT``, with fallbacks.
 
     An explicit ``instrument`` uses the device parsers (handles index-prefixed
     E4D, BERT topography, Syscal, etc.); ``None``/``"auto"`` uses pygimli's own
     reader. If the chosen path yields no measurements the loader falls back: an
     explicit instrument retries native pygimli; a still-empty result triggers a
-    short sweep of count-prefixed device formats so an E4D-style file never
+    short sweep of count-prefixed device formats so an E4D-format file never
     loads empty. Raises ``ValueError`` if nothing parses.
 
     When the explicit instrument's reader refused the file outright, the retries
     run only where they read the same family of layouts (``_NATIVE_RETRY``,
-    ``_SWEEP_RETRY``); otherwise that reader's error is raised. Picked as DAS-1,
-    a DAS-1 file missing its data marker used to be "auto-recovered" by the
-    sweep as one reading on one electrode.
+    ``_SWEEP_RETRY``); otherwise that reader's error is raised. A DAS-1 file
+    missing its data marker, picked as DAS-1, is refused this way rather than
+    "auto-recovered" by the sweep as one reading on one electrode.
+
+    ``survey_3d`` says whether the electrodes are a 3-D survey's, kept at
+    (x, y, z); None decides from the electrode file, or from the electrodes.
     """
     path = str(path)
+    if survey_3d is None and electrode_file:
+        with contextlib.suppress(Exception):  # the reader reports a bad file
+            survey_3d = read_electrode_layout(electrode_file)[1]
     inst = str(instrument).strip() if instrument else ""
     is_auto = inst.lower() in _AUTO_NAMES
     failures: List[Exception] = []
@@ -509,7 +637,7 @@ def load_ert_container(path: str, instrument: Optional[str] = None,
 
     # 1. explicit instrument
     if not is_auto:
-        data = _via_instrument(path, inst, electrode_file, spacing, log, failures)
+        data = _via_instrument(path, inst, electrode_file, spacing, log, failures, survey_3d)
         if _usable(data, log):
             return data
         if failures:
@@ -524,7 +652,7 @@ def load_ert_container(path: str, instrument: Optional[str] = None,
 
     # 2. native pygimli. It cannot be handed an electrode file, which is then
     # applied here: this is where a pick whose reader refused the file lands,
-    # and it used to return the header's positions without a word.
+    # so the electrode file must be applied here, not left unused.
     if retry_native:
         data = _via_native(path, log)
         if _usable(data, log):
@@ -536,7 +664,7 @@ def load_ert_container(path: str, instrument: Optional[str] = None,
     for cand in (_RECOVERY_INSTRUMENTS if retry_sweep else ()):
         if cand.lower() == inst.lower():
             continue
-        data = _via_instrument(path, cand, electrode_file, spacing, log, failures)
+        data = _via_instrument(path, cand, electrode_file, spacing, log, failures, survey_3d)
         if _usable(data, log):
             log(f"Auto-recovered '{Path(path).name}' using instrument='{cand}'.")
             return data
@@ -622,21 +750,24 @@ def save_edited_ert_container(
         edited.removeSensorIdx(index)
 
     # The readings as they stand, before any electrode moves: k and rhoa follow
-    # the moved ones from here (follow_moved_sensors). Left as they were, the
-    # saved input paired the new positions with apparent resistivities formed
-    # on the old ones.
+    # the moved ones from here (follow_moved_sensors). Without that, the saved
+    # input would pair the new positions with apparent resistivities formed on
+    # the old ones.
     before = pg.DataContainerERT(edited)
     retained_rows = [
         item for item in electrodes if item.get("original_index") is not None
     ]
+    def position(item):
+        # A 3-D survey's electrode carries its y; a profile's elevation is y.
+        if "y" in item:
+            return pg.Pos(float(item["x"]), float(item["y"]), float(item["z"]))
+        return pg.Pos(float(item["x"]), float(item["z"]))
+
     for current_index, item in enumerate(retained_rows):
-        edited.setSensorPosition(
-            current_index,
-            pg.Pos(float(item["x"]), float(item["z"])),
-        )
+        edited.setSensorPosition(current_index, position(item))
     for item in electrodes:
         if item.get("original_index") is None:
-            edited.createSensor(pg.Pos(float(item["x"]), float(item["z"])))
+            edited.createSensor(position(item))
     if edited.size():
         follow_moved_sensors(edited, before)
 
@@ -725,7 +856,8 @@ def normalize_for_timelapse(files: Sequence[str], instrument: Optional[str],
                             max_error: Optional[float] = None,
                             engine: str = "pyhydro",
                             electrode_file: Optional[str] = None,
-                            error_model: Optional[Mapping[str, Any]] = None):
+                            error_model: Optional[Mapping[str, Any]] = None,
+                            survey_3d: Optional[bool] = None):
     """Write native files, filtering each survey independently.
 
     PyHydro keeps each survey's own measurement count and ordering, and so do
@@ -733,7 +865,7 @@ def normalize_for_timelapse(files: Sequence[str], instrument: Optional[str],
     R3t, which invert each survey's readings shared with the first. ADTLERT
     aligns the union of surviving ABMN rows and fills missing rows at 100%
     error. ``electrode_file`` places every survey's electrodes, as it does one
-    survey's in :func:`load_ert_container`.
+    survey's in :func:`load_ert_container`, as does ``survey_3d``.
 
     ``error_model`` (``{"m", "b", "floor"}``, see
     :func:`reciprocal_model_errors`) replaces every survey's ``err`` column
@@ -745,7 +877,8 @@ def normalize_for_timelapse(files: Sequence[str], instrument: Optional[str],
     base = Path(out_dir) / "qt_ert_timelapse" / "normalized"
     base.mkdir(parents=True, exist_ok=True)
     containers = [load_ert_container(f, instrument=instrument, log=log,
-                                     electrode_file=electrode_file) for f in files]
+                                     electrode_file=electrode_file, survey_3d=survey_3d)
+                  for f in files]
     if not containers:
         raise ValueError("Time-lapse normalization needs at least one ERT file.")
     if error_model:
@@ -877,7 +1010,7 @@ def merge_reciprocal(forward, reciprocal, snap: float = 1e-3):
     # appends, and stops on a field only one file has - the forward file's
     # ``k_file`` when only that file carried its own geometric factors, say.
     # Both sides are padded with zeros to the same fields first; the loop
-    # below then rebuilds or drops each one-sided field as it always did.
+    # below then rebuilds or drops each one-sided field.
     def fields(data) -> set:
         return {str(token) for token in data.dataMap().keys()} - {
             "a", "b", "m", "n", "valid"}

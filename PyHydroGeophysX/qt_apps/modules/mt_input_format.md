@@ -27,15 +27,15 @@ recording is read again with them. Changing the calibration does the same.
 
 **Directions.** Which way each channel points, in degrees clockwise from
 north: 0 north, 90 east, 180 south, 270 west. Leave them *as recorded* unless
-the layout differs from what the receiver was told - at Manchester, Iowa, Ex
-was laid out to the south (180) and Ey and Hy to the west (270), and read as
-recorded the Zyx phase came out of its quadrant. The recording is read again
+the layout differs from what the receiver was told - Ex laid out to the south
+(180) and Ey and Hy to the west (270), say: read as recorded, the Zyx phase
+falls outside its quadrant. The recording is read again
 with them, and the run records them. A remote reference keeps its own
 directions; they do not change the impedance.
 
 **Periodic noise.** Interference that repeats exactly on the receiver's GPS
 clock - a pulse every 4 s, or a disturbance with each 30 s burst, as Phoenix
-MTU-5Cs carried at Manchester, Iowa - is looked for when a recording is read.
+MTU-5C receivers can carry - is looked for when a recording is read.
 When found, its periods fill in **Periodic noise (s)** under Processing and
 its waveform is subtracted before processing; that removes only the narrow
 lines at its harmonics. It matters most at 1-10 s, where the natural field is
@@ -43,8 +43,8 @@ weakest: there the interference can pass for a tight, coherent impedance, and
 it is coherent between two receivers, so a remote reference does not remove it.
 Clear the field to process the data as recorded. **Repeats averaged** (31 by
 default) is how many repeats make up the waveform taken off each one; when the
-interference changes shape within minutes, as at Manchester, 5 removes far more
-of it.
+interference changes shape within minutes, a smaller number such as 5 removes
+far more of it.
 
 **Power line.** Hum from the grid (50 or 60 Hz) is looked for when a recording
 is read and, when found, set here; its frequency and harmonics are then notched

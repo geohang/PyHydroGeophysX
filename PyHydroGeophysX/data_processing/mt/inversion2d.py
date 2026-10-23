@@ -193,7 +193,7 @@ class ProfileInversionResult:
 
 
 #: A site frequency within 5 % of a profile frequency (``|ln(f_site / f)|``
-#: below this) is taken as that frequency, as it always was.
+#: below this) is taken as that frequency.
 PROFILE_FREQUENCY_TOLERANCE = 0.05
 #: Widest gap between two of a site's own frequencies across which its
 #: impedance is interpolated to a profile frequency: a factor of 2.25, so a

@@ -47,12 +47,11 @@ class PlanSliceView(QWidget):
         row = QHBoxLayout()
         row.addWidget(QLabel("Depth"))
         self._z = QSlider(Qt.Horizontal)
-        # A drag emits a value per mouse move, and each used to rebuild the map
-        # from scratch. Now each one relabels the depth at once and asks for a
-        # drawing; the requests of one turn of the event loop make one, and
-        # while the handle is held that one is a preview - the soundings
-        # recoloured on the map already drawn. The interpolated surface is drawn
-        # once the handle is let go.
+        # A drag emits a value per mouse move. Each relabels the depth at once
+        # and asks for a drawing; the requests of one turn of the event loop
+        # make one, and while the handle is held that one is a preview - the
+        # soundings recoloured on the map already drawn. The interpolated
+        # surface is drawn once the handle is let go.
         self._z.valueChanged.connect(self._on_depth_changed)
         self._z.sliderReleased.connect(self._request_full)
         row.addWidget(self._z, stretch=1)

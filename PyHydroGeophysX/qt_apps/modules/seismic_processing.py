@@ -179,8 +179,8 @@ def _pick_shot(shot: Dict[str, Any], settings: Dict[str, Any]):
 def _pick_shots(shots: List[Dict[str, Any]], settings: Dict[str, Any], log=None) -> Dict[str, Any]:
     """"All shots", off the window's thread: pick every record, then screen them together.
 
-    A long line took a minute on the window's thread, which froze the page
-    with no sign of progress; ``log`` reports each shot as it is done.
+    A long line takes long enough that, on the window's thread, it would freeze
+    the page with no sign of progress; ``log`` reports each shot as it is done.
     """
     log = log or (lambda _message: None)
     picks, repicked = [], []
@@ -811,9 +811,9 @@ class SeismicProcessingModule(BaseModule):
 
     # -- SRT inversion controls ----------------------------------------------
     # Grouped the same way as the ERT page: what defines the run, then what the
-    # software is allowed to change on its own. The travel-time inversion now
+    # software is allowed to change on its own. The travel-time inversion
     # shares ERT's stopping rule, plateau continuation, and lambda search, so it
-    # earns the same controls rather than running entirely on library defaults.
+    # has the same controls rather than running entirely on library defaults.
     def _build_srt_inversion_group(self) -> QGroupBox:
         box = QGroupBox("Inversion")
         form = QFormLayout(box)
@@ -825,7 +825,7 @@ class SeismicProcessingModule(BaseModule):
         self._srt_engine.setToolTip(
             "Solver. The in-house Gauss-Newton inversion exposes its own stopping "
             "rule, so the fit assistance below can drive it; the PyGIMLi manager "
-            "runs once and is the historical default.")
+            "runs once.")
         self._srt_engine.currentIndexChanged.connect(self._sync_srt_engine)
         form.addRow("Engine", self._srt_engine)
 
@@ -993,8 +993,8 @@ class SeismicProcessingModule(BaseModule):
         suffix = p.suffix.lower()
         if _SEISMIC_OK and suffix in (".sgy", ".segy"):
             # Every trace: this is the working dataset - its shots are picked and
-            # inverted - not a preview. A 4000-trace cap dropped the later shots
-            # without a word, and the metadata then reported the cut count.
+            # inverted - not a preview. A trace cap would drop the later shots
+            # without a word, and the metadata would report the cut count.
             dataset = read_segy(str(p))
             # The header's whole microseconds against the acquisition record's
             # interval, as the seismic workflow reads it.
@@ -1314,15 +1314,15 @@ class SeismicProcessingModule(BaseModule):
         return [float(self._receiver_position(trace)[0]) for trace in range(count)]
 
     def _on_geometry_changed(self) -> None:
-        """Put the picks' geophones where the spacing and geophone-0 x now say.
+        """Put the picks' geophones where the spacing and geophone-0 x say.
 
         A pick stamps its geophone's position when it is made, and the
         travel-time plot, the exported travel times and the SRT inversion all
-        read that stamp. Nothing followed these two settings, so picks taken at
-        the default 1 m stayed 1 m apart after the spacing was set to 0.5 m -
-        offsets twice too long, and velocities twice too high.
+        read that stamp. Without this, picks taken at the default 1 m would
+        stay 1 m apart after the spacing is set to 0.5 m - offsets twice too
+        long, and velocities twice too high.
         """
-        self._spacing_from_headers = False   # set by hand now, whatever the file said
+        self._spacing_from_headers = False   # set by hand, whatever the file said
         if self._geo_positions:
             # A position file places every geophone; these boxes only show its
             # first position and step, so they go back to saying that.
@@ -1488,7 +1488,7 @@ class SeismicProcessingModule(BaseModule):
         self._picks[trace] = self._make_pick(trace, sample, amplitude)
         self._pick_src[trace] = "manual"
         self.log(f"Manual pick: trace {trace}, time {time_s:.5g}", "info")
-        self._redraw_markers()
+        self._redraw_markers(fit=False)
         self._update_pick_info()
         self._publish()
 
@@ -1500,7 +1500,7 @@ class SeismicProcessingModule(BaseModule):
                 self._order.append(trace)
             self._picks[trace] = self._make_pick(trace, int(round(time_s / dt)), amp)
             self._pick_src[trace] = "manual"
-        self._redraw_markers()
+        self._redraw_markers(fit=False)
         self._update_pick_info()
         self._publish()
         self.log(f"Line pick: {len(points)} traces", "info")
@@ -1718,8 +1718,9 @@ class SeismicProcessingModule(BaseModule):
             "neighbour_rejected": len(screen.neighbour_rejected),
             "manual_kept": n_manual, "shots_left_out": dropped, "records_left_out": left_out}
 
-    def _redraw_markers(self) -> None:
-        self._viewer.set_picks(self._viewer_picks())
+    def _redraw_markers(self, fit: bool = True) -> None:
+        """``fit`` False keeps the gather's zoom (picks made or undone by hand)."""
+        self._viewer.set_picks(self._viewer_picks(), fit=fit)
 
     def _undo_pick(self) -> None:
         if not self._order:
@@ -1727,7 +1728,7 @@ class SeismicProcessingModule(BaseModule):
         trace = self._order.pop()
         self._picks.pop(trace, None)
         self._pick_src.pop(trace, None)
-        self._redraw_markers()
+        self._redraw_markers(fit=False)
         self._update_pick_info()
         self._publish()
 
@@ -1761,8 +1762,8 @@ class SeismicProcessingModule(BaseModule):
         self._tt_plot.clear()
         self._tt_shows_container = False
         # The geophones, on the t = 0 line, so the plot shows the line the picks
-        # are placed on before there are any. Empty, it kept the range of what it
-        # last drew, which read as the spacing not having taken.
+        # are placed on before there are any. Empty, it would keep the range of
+        # what it last drew, which reads as the spacing not having taken.
         geophones = self._geophone_xs()
         if geophones:
             self._tt_plot.plot(geophones, [0.0] * len(geophones), pen=None, symbol="t1",
@@ -3039,7 +3040,7 @@ class SeismicProcessingModule(BaseModule):
         if self._shot_spacing is not None:
             result["shot_pattern"] = {
                 "first_shot_x": self._shot0_x, "shot_spacing": self._shot_spacing,
-                "note": "shot_x now auto-fills per record on select_record; set shot_x only to "
+                "note": "shot_x auto-fills per record on select_record; set shot_x only to "
                         "override one irregular shot."}
         return result
 
@@ -3509,7 +3510,7 @@ class SeismicProcessingModule(BaseModule):
                 "picks": len(picks)}
 
 
-# Names a 0.3.0 script could import from this page, which it no longer defines.
+# Redirects names that 0.3.0 scripts imported from this page to where they live.
 from PyHydroGeophysX._internal.deprecations import legacy_names as _legacy_names  # noqa: E402
 
 __getattr__ = _legacy_names(__name__, {

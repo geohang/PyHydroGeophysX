@@ -1,16 +1,16 @@
 """How the studio looks while an AI assistant, rather than the user, is doing the work.
 
-An automatic run used to look like any long computation: a status line, a
-progress bar whose fraction is a guess, and a log. Nothing on screen said that
-a model was choosing each step, so a run read as a script someone had started.
-These widgets give the agent a visual presence of its own, in one consistent
-language wherever it appears.
+A status line, a progress bar whose fraction is a guess, and a log do not show
+that a model is choosing each step; an automatic run drawn with them alone reads
+as a script someone started. These widgets give the agent a visual presence of
+its own, in one consistent language wherever it appears.
 
 The rest of the studio is neutral (:mod:`..theme`), so colour here means the
 agent. An assistant at work shows as a soft glow of blue, purple, pink and
-orange flowing round the edge of the area the agent is working in, and an orb whose motion says what it is doing - the gradient
-breathing while it decides, a ring turning while a step runs, a steady orange
-while it waits for you, a green check or a red cross when a step ends.
+orange flowing round the edge of the area the agent is working in, and an orb
+whose motion says what it is doing - the gradient breathing while it decides,
+a ring turning while a step runs, a steady orange while it waits for you, a
+green check or a red cross when a step ends.
 
 - :class:`AiOrb` - the agent's orb.
 - :class:`ShimmerText` - a status line with a light passing over it, the

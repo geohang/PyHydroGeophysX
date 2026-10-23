@@ -1,9 +1,8 @@
 """Central theme for the PyHydroGeophysX studio, in a light and a dark appearance.
 
 One module owns the whole look so it stays consistent: the two palettes, a
-hand-crafted QSS stylesheet, pyqtgraph and Matplotlib plot colors, a
-``qtawesome`` icon helper (with a graceful no-op fallback when qtawesome is
-absent), and the window icon.
+QSS stylesheet, pyqtgraph and Matplotlib plot colors, a ``qtawesome`` icon
+helper (a no-op when qtawesome is absent), and the window icon.
 
 The design is neutral greys and white (near-black in the dark appearance) for
 everything structural, one blue accent for what can be acted

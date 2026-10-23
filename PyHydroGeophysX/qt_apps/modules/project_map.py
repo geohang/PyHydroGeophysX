@@ -428,7 +428,7 @@ class ProjectMapModule(BaseModule):
             self._filter_changed()
         # The redraw leaves the status line on its idle text; when work is gone,
         # the reason goes ahead of it so nothing vanishes unexplained. A job can
-        # also stop in the redraw itself when the map now shows another survey,
+        # also stop in the redraw itself when the map shows another survey,
         # such as one that Add to Map has just saved from another page.
         notice = ''
         if running is not None and self._surface_job is None:
@@ -490,8 +490,8 @@ class ProjectMapModule(BaseModule):
                 self._list.setCurrentItem(item)
         if self._list.currentItem() is None and self._list.topLevelItemCount():
             # Open on a survey the map shows. A hidden one has no slice drawn to
-            # interpolate, so starting on it left Interpolate disabled beside a
-            # slice and a method that looked chosen.
+            # interpolate, so starting on it would leave Interpolate disabled
+            # beside a slice and a method that look chosen.
             items = [self._list.topLevelItem(i) for i in range(self._list.topLevelItemCount())]
             shown = [item for item in items if item.checkState(0) == Qt.Checked]
             self._list.setCurrentItem((shown or items)[0])
@@ -542,8 +542,12 @@ class ProjectMapModule(BaseModule):
                 elif entry['kind'] == 'grid':
                     edges = arrays['z_edges']
                     self._depth.blockSignals(True)
-                    for index, z in enumerate((edges[:-1] + edges[1:])/2):
-                        self._depth.addItem(f'Model Z = {z:g} m', index)
+                    depth = entry.get('z_axis') == 'depth'
+                    levels = list(enumerate((edges[:-1] + edges[1:])/2))
+                    # Depths read from the ground down.
+                    for index, z in (levels[::-1] if depth else levels):
+                        self._depth.addItem(f'Depth {-z:.3g} m' if depth
+                                            else f'Model Z = {z:g} m', index)
                     self._depth.blockSignals(False)
                     self._draw_grid(entry, arrays)
                     self._result_stack.setCurrentWidget(self._mesh_view)
@@ -594,7 +598,8 @@ class ProjectMapModule(BaseModule):
         if entry['kind'] == 'grid':
             if layer is None:
                 return None
-            return arrays['model3d'][:, :, int(layer)].ravel(), entry['units'], False
+            return (arrays['model3d'][:, :, int(layer)].ravel(), entry['units'],
+                    bool(entry.get('log_scale')))
         if entry['kind'] == 'points':
             return np.asarray(arrays['values'], dtype=float).ravel(), entry['units'], False
         return None
@@ -756,9 +761,9 @@ class ProjectMapModule(BaseModule):
     def _surface_hint(self):
         """What stands between the selection and a surface to interpolate.
 
-        The one line used to be "Choose a data slice and an interpolation method"
-        whatever the cause, which reads as a fault when both are chosen and the
-        selected survey is merely hidden on the map.
+        The line names the cause: a generic "Choose a data slice and an
+        interpolation method" would read as a fault when both are chosen and
+        the selected survey is merely hidden on the map.
         """
         entry = self._entry()
         if entry is None:
@@ -863,21 +868,31 @@ class ProjectMapModule(BaseModule):
         index = self._depth.currentData()
         index = model.shape[2] - 1 if index is None else int(index)
         x, y, z = (arrays[k] for k in ('x_edges', 'y_edges', 'z_edges'))
-        finite = model[np.isfinite(model)]
+        log_scale = bool(entry.get('log_scale'))
+        finite = model[np.isfinite(model) & ((model > 0) if log_scale else True)]
         low, high = (float(finite.min()), float(finite.max())) if finite.size else (0., 1.)
         if low == high:
-            low, high = low - 1, high + 1
+            low, high = (low * .99, high * 1.01) if log_scale else (low - 1, high + 1)
         # One range for both panels: they share the colour bar.
-        low, high = self._section_limits(entry, low, high)
-        cmap = self._section_cmap(entry, 'coolwarm')
-        image = plan.pcolormesh(x, y, model[:, :, index].T, cmap=cmap, vmin=low, vmax=high)
+        low, high = self._section_limits(entry, low, high, log_scale=log_scale)
+        from matplotlib.colors import LogNorm, Normalize
+        norm = LogNorm(low, high) if log_scale else Normalize(low, high)
+        cmap = self._section_cmap(entry, 'turbo' if log_scale else 'coolwarm')
+        image = plan.pcolormesh(x, y, model[:, :, index].T, cmap=cmap, norm=norm)
         set_length_axis(plan, 'x', 'Source X')
         set_length_axis(plan, 'y', 'Source Y')
         level = to_display_length((z[index] + z[index + 1]) / 2)
-        plan.set_title(f"{entry['name']} · Z={level:.4g} {length_units.current()}")
-        section.pcolormesh(x, z, model[:, model.shape[1]//2, :].T, cmap=cmap, vmin=low, vmax=high)
+        # A model read below its ground keeps depth as its vertical.
+        depth = entry.get('z_axis') == 'depth'
+        plan.set_title(f"{entry['name']} · " + (f"depth {-level:.4g}" if depth
+                                                  else f"Z={level:.4g}")
+                       + f" {length_units.current()}")
+        section.pcolormesh(x, -z if depth else z, model[:, model.shape[1]//2, :].T,
+                           cmap=cmap, norm=norm)
         set_length_axis(section, 'x', 'Source X')
-        set_length_axis(section, 'y', 'Model Z')
+        set_length_axis(section, 'y', 'Depth' if depth else 'Model Z')
+        if depth:
+            section.invert_yaxis()
         section.set_title('Central Y section')
         self._section_fig.colorbar(image, ax=[plan, section], label=entry['units'])
         self._section_drawn()

@@ -13,6 +13,7 @@ remains an internal fallback when a device parser raises.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 from pathlib import Path
@@ -85,16 +86,15 @@ from PyHydroGeophysX.workflows import (
     export_workflow_bundle,
 )
 
-# Imported rather than repeated: the bounds used to be copied here because
-# ert_inversion pulls in pygimli and this module stays importable without it.
-# lambda_search imports nothing but numpy, so the copy is no longer needed.
+# Imported rather than repeated: lambda_search needs nothing but numpy, so this
+# module stays importable without pygimli, which ert_inversion pulls in.
 from PyHydroGeophysX.inversion.lambda_search import (  # noqa: E402
     LAMBDA_BOUNDS as _LAMBDA_BOUNDS,
 )
 
 #: The highest mesh quality offered, ert_mesh.MAX_MESH_QUALITY: Triangle
-#: never finishes much above it. Repeated for the reason the bounds above no
-#: longer are - ert_mesh pulls in pygimli.
+#: never finishes much above it. Repeated here because ert_mesh pulls in
+#: pygimli, which this module does not import.
 _MAX_MESH_QUALITY = 34.0
 
 _TC_WAITING = ("Run an inversion - one survey or a time-lapse series; Apply then "
@@ -111,9 +111,8 @@ _RECIP_HOW = ("To get them, measure reciprocals in the field - each reading repe
 
 #: Where the Data QC checks start. None acts until Apply filter is pressed, and
 #: those under "More checks" only while it is unfolded, so none changes a run
-#: nobody filtered. Each was checked against the shipped BERT, DAS-1 and E4D
-#: surveys and a Subsurface Insights line: it drops readings that are plainly
-#: bad and leaves the bulk of a survey alone. At zero they all did nothing.
+#: nobody filtered. Each starts where it drops readings that are plainly bad
+#: and leaves the bulk of a survey alone.
 _QC_DEFAULTS: Dict[str, Any] = {
     "max_error": 20.0,           # %; a file with no error column of its own is all 5 %
     "drop_nonpositive": True,    # a polarity or geometry error, not a measurement
@@ -194,6 +193,10 @@ class ERTProcessingModule(BaseModule):
         super().__init__(state, log, parent)
         self._x: List[float] = []
         self._z: List[float] = []
+        # A 3-D survey's electrodes cover an area: each has a y as well, and
+        # the data are drawn and inverted in 3-D (ert_io.survey_is_3d).
+        self._y: List[float] = []
+        self._survey_3d = False
         self._labels: List[str] = []
         self._electrode_origins: List[Optional[int]] = []
         self._electrode_path: Optional[Path] = None
@@ -359,9 +362,9 @@ class ERTProcessingModule(BaseModule):
             self._pseudo_scale_labels.append(label)
         legend_layout.addLayout(scale_row)
         pseudo_layout.addWidget(self._pseudo_legend)
-        # Until data arrive the tab says what to do. Left as built it showed an
-        # empty 0-1 axis over a colour bar of "—" placeholders, which read as a
-        # bar whose numbers had been covered.
+        # Until data arrive the tab says what to do. Left as built it would show
+        # an empty 0-1 axis over a colour bar of "—" placeholders, which reads
+        # as a bar whose numbers are covered.
         self._show_pseudosection_message(_EMPTY_DATA_MESSAGE)
 
         # The studio state's colormap choices, shared with Saved Results: a
@@ -424,6 +427,23 @@ class ERTProcessingModule(BaseModule):
         pick_bar.addWidget(self._lam_pick, stretch=1)
         self._lam_pick_row.setVisible(False)
         model_layout.addWidget(self._lam_pick_row)
+        # A profile inverted on a 3D mesh: the section is drawn here, and the
+        # whole volume opens in the 3D viewer.
+        self._model_3d_path = ""
+        self._model_3d_btn = QPushButton("Open 3D model")
+        self._model_3d_btn.setIcon(theme.icon("fa5s.cube"))
+        self._model_3d_btn.setToolTip(
+            "The inversion ran on a 3D mesh; this section is the model along the "
+            "line. Open the whole 3D model in the 3D viewer.")
+        self._model_3d_btn.clicked.connect(
+            lambda: self._model_3d_path and self.viewMeshRequested.emit(self._model_3d_path))
+        self._model_3d_row = QWidget()
+        model_3d_bar = QHBoxLayout(self._model_3d_row)
+        model_3d_bar.setContentsMargins(6, 2, 6, 2)
+        model_3d_bar.addStretch(1)
+        model_3d_bar.addWidget(self._model_3d_btn)
+        self._model_3d_row.setVisible(False)
+        model_layout.addWidget(self._model_3d_row)
         model_layout.addWidget(self._model_view, stretch=1)
 
         self._quality_view = InversionQualityView()
@@ -460,8 +480,8 @@ class ERTProcessingModule(BaseModule):
         self._loaded_pairing: Optional[Dict[str, Any]] = None
         # Each survey's QC report - its pairing among it - as read for the
         # series view or by the time-lapse QC: {survey key: {filter key:
-        # report}} (_recip_survey_key, _recip_qc_key). A series of 420 surveys
-        # takes minutes to read, so it is read once per file and filter.
+        # report}} (_recip_survey_key, _recip_qc_key). A long series takes
+        # minutes to read, so it is read once per file and filter.
         self._recip_cache: Dict[tuple, Dict[str, Dict[str, Any]]] = {}
         self._recip_worker: Optional[TaskWorker] = None
         self._recip_reading: Optional[tuple] = None
@@ -470,12 +490,10 @@ class ERTProcessingModule(BaseModule):
         self._recip_timer.setInterval(500)
         self._recip_timer.timeout.connect(self._refresh_recip_view)
 
-        # The data come first, loaded beside their pseudosection. The electrodes
-        # had a tab of their own, a plot of dots that held the loading controls:
-        # once a file loaded the page moved on to the pseudosection and the list
-        # went with the tab, so a series was clicked through by switching back
-        # for every survey. The electrodes are now drawn along the top of the
-        # pseudosection and on the Mesh tab, and summed up in the data panel.
+        # The data come first, loaded beside their pseudosection, so a series
+        # is clicked through without switching tabs for every survey. The
+        # electrodes are drawn along the top of the pseudosection and on the
+        # Mesh tab, and summed up in the data panel.
         self._tabs.addTab(self._pseudo_widget, "Data")
         self._tabs.addTab(self._recip_view, "Reciprocal errors")
         self._tabs.addTab(self._mesh_tab, "Mesh")
@@ -498,9 +516,9 @@ class ERTProcessingModule(BaseModule):
     def _build_controls(self) -> QWidget:
         # Vertical scrolling only, so the column must never be narrower than its
         # widest row: 450-500 px is the preferred width, and the column widens
-        # past it when the content needs more - a fixed 500 px cut the file-list
-        # buttons and hint off at the right edge once the font was wider than
-        # the one it was sized with.
+        # past it when the content needs more - a fixed 500 px would cut the
+        # file-list buttons and hint off at the right edge when the font is
+        # wider than the one it was sized with.
         scroll = ContentWidthScrollArea(minimum=450, maximum=500)
         panel = QWidget()
         scroll.setWidget(panel)
@@ -510,12 +528,11 @@ class ERTProcessingModule(BaseModule):
         self._load_group = loader
         lform = QFormLayout(loader)
 
-        # One survey or a series is the first thing settled, as in ResIPy's
-        # import page: it decides what the list below is for and which Run
-        # button the column ends with. It sat in the Run group at the bottom,
-        # a page away from the list it applies to.
+        # One survey or a series is the first thing settled: it decides what
+        # the list below is for and which Run button the column ends with, so
+        # it sits above that list, not in the Run group at the bottom.
         # Two joined buttons, the chosen one filled (theme: QPushButton[segment]);
-        # as radio buttons the choice showed as a lone dot, easy to misread.
+        # as radio buttons the choice shows as a lone dot, easy to misread.
         self._single_mode = QPushButton("One survey")
         self._single_mode.setIcon(theme.icon("fa5s.file-alt"))
         self._single_mode.setToolTip(
@@ -573,9 +590,9 @@ class ERTProcessingModule(BaseModule):
 
         # A file whose first lines name another format than the one chosen,
         # said beside the chooser with the switch one click away. Never made
-        # on its own: the guess reads a few header lines, and pygimli's own
-        # reader shows what an automatic choice costs - it read a DAS-1 file
-        # as one electrode and one reading without a word.
+        # on its own: the guess reads a few header lines, and an automatic
+        # choice has a cost - pygimli's own reader reads a DAS-1 file as one
+        # electrode and one reading without a word.
         self._format_guess: Optional[Tuple[str, str]] = None   # (format, file)
         self._format_hint = QWidget()
         hint_row = QHBoxLayout(self._format_hint)
@@ -589,8 +606,7 @@ class ERTProcessingModule(BaseModule):
         hint_row.addWidget(self._format_hint_btn)
         self._format_hint.setVisible(False)
         lform.addRow(self._format_hint)
-        # Changing the format by hand reads the survey on screen again with it;
-        # it used to wait for the file to be clicked once more.
+        # Changing the format by hand reads the survey on screen again with it.
         self._instrument.activated.connect(self._reload_with_format)
 
         self._tl_list = QListWidget()
@@ -624,8 +640,8 @@ class ERTProcessingModule(BaseModule):
         sort_btn.clicked.connect(self._sort_tl_files_by_time)
         clr_btn = QPushButton("Clear"); clr_btn.setIcon(theme.icon("fa5s.trash"))
         clr_btn.clicked.connect(self._clear_tl_files)
-        # Two rows rather than one: all six in a row were the widest thing in the
-        # column. Adding and removing files on top, ordering them below.
+        # Two rows rather than one: all six in a row would be the widest thing in
+        # the column. Adding and removing files on top, ordering them below.
         for b in (add_btn, rm_btn, clr_btn):
             tl_btns.addWidget(b)
         lform.addRow(tl_btns)
@@ -642,8 +658,7 @@ class ERTProcessingModule(BaseModule):
 
         # The escape hatch for files whose names and headers carry no time, under
         # the line that says which files those are, and only while there are
-        # some. It sat among the time-lapse options, always on screen, with
-        # nothing near it saying what it was for.
+        # some.
         self._tl_use_mtime = QCheckBox("Date undated files by when they were last saved")
         self._tl_use_mtime.setToolTip(
             "Use each file's last-modified time as its acquisition time when neither "
@@ -696,7 +711,7 @@ class ERTProcessingModule(BaseModule):
         qc = QGroupBox("Data QC / filter")
         self._qc_group = qc
         qform = QFormLayout(qc)
-        # Check 0, before every other check, as in Craig Ulrich's processing.
+        # Check 0, before every other check.
         # Off by default: kept apart, the two readings of a pair let the fit see
         # how far they disagree, and an averaged pair hides that.
         self._qc_average = QCheckBox("Average each reading with its reciprocal")
@@ -746,8 +761,8 @@ class ERTProcessingModule(BaseModule):
         mform.addRow(self._qc_drop_neg)
 
         # Six decimals, because files that report volts and amperes need floors
-        # of a tenth of a millivolt or milliampere; three decimals silently turned
-        # 0.0001 into 0, which switches the check off.
+        # of a tenth of a millivolt or milliampere; three decimals would silently
+        # turn 0.0001 into 0, which switches the check off.
         self._qc_min_v = PlainDoubleSpinBox(); self._qc_min_v.setRange(0.0, 1e6)
         self._qc_min_v.setDecimals(6); self._qc_min_v.setValue(_QC_DEFAULTS["min_voltage"])
         mform.addRow("Min |V|", self._qc_min_v)
@@ -756,10 +771,10 @@ class ERTProcessingModule(BaseModule):
         self._qc_min_i.setDecimals(6); self._qc_min_i.setValue(_QC_DEFAULTS["min_current"])
         mform.addRow("Min |I|", self._qc_min_i)
 
-        # |k| scales with the electrode spacing - the shipped E4D survey runs to
-        # 54,000 m, a Subsurface Insights line stops at 244 - so no one number
-        # suits every survey. Until it is set by hand the cap follows each file
-        # loaded, at a multiple of its median (_refresh_qc_availability).
+        # |k| scales with the electrode spacing - from a few hundred m on a short
+        # surface line to tens of thousands of m on a large survey - so no one
+        # number suits every survey. Until it is set by hand the cap follows each
+        # file loaded, at a multiple of its median (_refresh_qc_availability).
         self._qc_max_k_follows_file = True
         self._qc_max_k = PlainDoubleSpinBox(); self._qc_max_k.setRange(0.0, 1e9)
         self._qc_max_k.setDecimals(0); self._qc_max_k.setValue(0.0)
@@ -827,10 +842,9 @@ class ERTProcessingModule(BaseModule):
 
         # Mode comes first because it overrides several controls below it. The
         # split is by cost: the geometric-factor check is one extra forward run,
-        # and the auto-λ search is a full inversion per trial. On a 3647-point
-        # field survey they were 13 s and 189 s of a 247 s run.
+        # and the auto-λ search is a full inversion per trial.
         self._inv_mode = QComboBox()
-        # Named for what each does: "no pre-checks" left the checks unnamed.
+        # Named for what each does, so the label says which checks Thorough adds.
         for label, value in (("Quick: invert only", "quick"),
                              ("Thorough: check k, search λ", "full")):
             self._inv_mode.addItem(label, value)
@@ -1116,11 +1130,10 @@ class ERTProcessingModule(BaseModule):
         self._on_auto_lambda(self._auto_lam.isChecked())
         self._on_reject_outliers(self._reject.isChecked())
 
-        # Electrode editing has no panel: placing and dragging electrodes by mouse
-        # was fiddly and rarely the right way to fix a geometry. The operations
-        # live on as agent actions (add/move/delete/label/clear/list electrodes),
-        # which is both more precise and reproducible. The electrode file and the
-        # survey geometry are exported from the toolbar's Export menu.
+        # Electrode editing has no panel. The operations are agent actions
+        # (add/move/delete/label/clear/list electrodes), which are more precise
+        # and reproducible than placing electrodes by mouse. The electrode file
+        # and the survey geometry are exported from the toolbar's Export menu.
 
         # Result exports belong beside the result, where model post-processing
         # remains available without retaining the entire preparation column -
@@ -1157,8 +1170,8 @@ class ERTProcessingModule(BaseModule):
 
         # -- run: pinned under the column ------------------------------------
         # The column is longer than a screen once a series and its options are
-        # in it, and the Run button at its end was scrolled out of sight. It
-        # stays put below the settings now, with what still stops it from
+        # in it, and a Run button at its end would scroll out of sight. It
+        # stays pinned below the settings, with what still stops it from
         # running said above it.
         footer = QWidget()
         self._run_group = footer
@@ -1228,7 +1241,7 @@ class ERTProcessingModule(BaseModule):
             "month-long gap is allowed proportionally more change than an hour-long "
             "one. Weights are normalized by the median interval, so an evenly "
             "sampled series is unchanged and Alpha keeps its meaning. Untick to "
-            "constrain every pair equally, as before.")
+            "constrain every pair equally.")
         tlform.addRow(self._tl_dt_weight)
 
         self._tl_windowed = QCheckBox("Windowed (sliding window)")
@@ -1506,8 +1519,8 @@ class ERTProcessingModule(BaseModule):
     def _sync_run_ready(self) -> None:
         """Enable the Run button only when it can run, and say why it cannot.
 
-        It was always enabled: a file read under the wrong format let the run
-        start, and it failed a minute later with pyGIMLi's IndexError.
+        A file read under the wrong format would otherwise let the run start,
+        and it would fail a minute later with pyGIMLi's IndexError.
         """
         if not hasattr(self, "_run_reason"):
             return
@@ -1958,8 +1971,8 @@ class ERTProcessingModule(BaseModule):
                             reciprocal)
         # Only the latest request may land. Each click starts a load without
         # waiting for the one before, and a slow earlier file finishing last
-        # replaced the data under a list highlighting the newer one - so the
-        # next inversion ran on a survey nobody had selected.
+        # would replace the data under a list highlighting the newer one - so
+        # the next inversion would run on a survey nobody selected.
         def landed(res, w=worker):
             if w is not self._load_worker:
                 if done is not None:
@@ -1971,7 +1984,7 @@ class ERTProcessingModule(BaseModule):
                 return
             try:
                 self._on_ert_loaded(path, res)
-            except Exception as exc:  # noqa: BLE001 - the caller reports it, as it did
+            except Exception as exc:  # noqa: BLE001 - the caller reports it
                 done("failed", str(exc))
             else:
                 done("loaded", res)
@@ -1998,8 +2011,8 @@ class ERTProcessingModule(BaseModule):
 
         For callers that need the outcome before they can answer - the
         assistant's ``load_data``, which reports the loaded counts. They run on
-        the UI thread, and parsing there froze the studio for 0.65-0.9 s per
-        survey; the parse now runs on the worker while a local event loop keeps
+        the UI thread, and parsing there would freeze the studio for the length
+        of the read; the parse runs on the worker while a local event loop keeps
         the window painting and responding until this load has settled.
 
         Returns
@@ -2036,7 +2049,7 @@ class ERTProcessingModule(BaseModule):
 
         Drawn from its data - the file, or the name a sequence shares and how
         many surveys - with the engine added when it is not the in-house one,
-        so runs of different surveys no longer all read ``Run`` and a code.
+        so runs of different surveys are told apart in the list.
         """
         from PyHydroGeophysX.qt_apps.results_store import run_label_from_files
 
@@ -2051,8 +2064,8 @@ class ERTProcessingModule(BaseModule):
 
         Returns ``""`` when it is not installed. The installed distribution's
         metadata comes first: importing ResIPy checks the SHA1 of each of its
-        executables, which held up the UI thread for most of a second as this
-        page opened, and the loader imports it anyway, on its worker thread,
+        executables, which holds up the UI thread as this page opens, and the
+        loader imports it anyway, on its worker thread,
         when it reads a file. Without metadata the module is imported and asked:
         it carries its version as ``ResIPy_version`` rather than the usual
         ``__version__``, older builds carry neither, and a bare "yes" is the
@@ -2166,13 +2179,21 @@ class ERTProcessingModule(BaseModule):
         warning = ""
         reader, reason = "ResIPy", ""
         read_as = instrument
+        # An electrode file covering an area makes a 3-D survey whatever the
+        # data file's own header says; without one the electrodes decide.
+        file_3d = None
+        if elec_file:
+            with contextlib.suppress(Exception):  # the reader reports a bad file
+                file_3d = ert_load.read_electrode_layout(elec_file)[1]
         if instrument is None:  # defensive: the dropdown has no auto/None option
-            elec, pseudo, nmeas, data, note = self._load_pygimli(path, elec_file)
+            elec, pseudo, nmeas, data, note, three_d = self._load_pygimli(
+                path, elec_file, file_3d)
             reader = "PyGIMLi"
         else:
             try:
-                elec, pseudo, nmeas, data, note, (reader, reason), read_as = self._load_resipy(
-                    path, instrument, out_dir, elec_file, spacing)
+                (elec, pseudo, nmeas, data, note, (reader, reason), read_as,
+                 three_d) = self._load_resipy(path, instrument, out_dir, elec_file, spacing,
+                                              file_3d)
             except NotImplementedError:
                 # No reader for this format. PyGIMLi's reader would accept the
                 # file and return a quadrupole table built from the wrong
@@ -2182,8 +2203,8 @@ class ERTProcessingModule(BaseModule):
             except Exception as exc:  # noqa: BLE001
                 # PyGIMLi's reader answers for the unified family only; outside
                 # it the chosen reader's refusal is the answer. Retried natively,
-                # a DAS-1 file missing its data section loaded as one reading and
-                # the reader's own explanation was lost. Same rule, and message,
+                # a DAS-1 file missing its data section would load as one reading
+                # and the reader's own explanation would be lost. Same rule, and message,
                 # as ert_io.load_ert_container, so a file fails the same way
                 # here as in a time-lapse run.
                 if ert_load._canonical_instrument(str(instrument)) not in ert_load._NATIVE_RETRY:
@@ -2191,11 +2212,13 @@ class ERTProcessingModule(BaseModule):
                         f"'{Path(path).name}' could not be read as {instrument}: {exc}"
                     ) from exc
                 warning = f"{instrument} loader failed ({exc}); fell back to pygimli's native reader."
-                elec, pseudo, nmeas, data, note = self._load_pygimli(path, elec_file)
+                elec, pseudo, nmeas, data, note, three_d = self._load_pygimli(
+                    path, elec_file, file_3d)
                 reader, reason = "PyGIMLi", "ResIPy could not parse this file"
         return {"elec": elec, "pseudo": pseudo, "nmeas": nmeas, "data": data,
                 "warning": warning, "reader": reader, "reader_reason": reason,
-                "data_note": note, "instrument": read_as or instrument}
+                "data_note": note, "instrument": read_as or instrument,
+                "survey_3d": bool(three_d)}
 
     def _on_ert_loaded(self, path: str, res: dict) -> None:
         if res.get("warning"):
@@ -2214,15 +2237,17 @@ class ERTProcessingModule(BaseModule):
                      f"{self._instrument.itemText(read_as)}.", "info")
             self._instrument.setCurrentIndex(read_as)
         # A file read under the wrong format can come back "loaded": a DAS-1
-        # file read as BERT gave one electrode and one reading, the log said
-        # SUCCESS, and the inversion failed on it a minute later. A survey no
-        # instrument could have measured is refused here instead.
+        # file read as BERT gives one electrode and one reading, and the
+        # inversion would fail on it a minute later. A survey no instrument
+        # could have measured is refused here instead.
         from PyHydroGeophysX.data_processing.ert_formats import implausible_survey
         implausible = implausible_survey(len(elec), int(nmeas or 0))
         if implausible:
             data, pseudo = None, []
         self._x = [float(e[0]) for e in elec]
         self._z = [float(e[1]) for e in elec]
+        self._y = [float(e[2]) if len(e) > 2 else 0.0 for e in elec]
+        was_3d, self._survey_3d = self._survey_3d, bool(res.get("survey_3d"))
         self._labels = [str(i + 1) for i in range(len(self._x))]
         self._electrode_origins = list(range(len(self._x)))
         self._data_path = Path(path)
@@ -2285,8 +2310,8 @@ class ERTProcessingModule(BaseModule):
             self.log(f"{Path(path).name}: parsed {len(self._x)} electrodes but 0 measurements — "
                      f"the Instrument / format is probably wrong for this file.", "warn")
         elif pair:
-            # As Craig Ulrich's pairing summary gives it: both files, the
-            # readings of each, and how many quadrupoles were measured both ways.
+            # The pairing summary: both files, the readings of each, and how
+            # many quadrupoles were measured both ways.
             self.log(f"Loaded {len(self._x)} electrodes, {nmeas} measurements from "
                      f"{Path(path).name} with its reciprocal file {Path(pair['file']).name}: "
                      f"forward {pair['forward']} | reciprocal {pair['reciprocal']} | total "
@@ -2298,12 +2323,16 @@ class ERTProcessingModule(BaseModule):
                          + ", so the merged survey leaves it out.", "warn")
         else:
             self.log(f"Loaded {len(self._x)} electrodes, {nmeas} measurements from {Path(path).name}", "success")
+        if self._survey_3d and not was_3d:
+            self.log("The electrodes cover an area, so this is a 3-D survey: the Data "
+                     "tab shows it in plan, and it is inverted on a 3-D mesh.", "info")
+        self._sync_survey_dimension()
 
     def _name_electrode_file(self, message: str) -> str:
         """``message`` with the readers' copy of the electrode file named as the user's.
 
         The readers are handed a plain copy (:meth:`_electrode_table_for`), so
-        their refusal named a scratch file nobody had heard of.
+        their refusal would name a scratch file the user has never seen.
         """
         table, source = self._electrode_table, self._electrode_path
         if table is not None and source is not None:
@@ -2365,7 +2394,8 @@ class ERTProcessingModule(BaseModule):
                  "info")
         self._start_load(str(path))
 
-    def _load_pygimli(self, path: str, electrode_file: Optional[str] = None):
+    def _load_pygimli(self, path: str, electrode_file: Optional[str] = None,
+                      three_d: Optional[bool] = None):
         import pygimli.physics.ert as ert
 
         with ert_load.no_invalid_data_file():
@@ -2380,13 +2410,15 @@ class ERTProcessingModule(BaseModule):
             except Exception:  # noqa: BLE001
                 pass
         # PyGIMLi's reader takes no electrode file, so it is applied here - or
-        # refused, as the instrument readers refuse one that does not fit. This
-        # fallback used to read the header's positions whatever had been loaded.
+        # refused, as the instrument readers refuse one that does not fit.
         if electrode_file:
             ert_load.place_electrodes(data, electrode_file)
         pos = np.asarray(data.sensors(), dtype=float)
         x = pos[:, 0]
-        if pos.shape[1] >= 3 and np.std(pos[:, 2]) > 1e-9:
+        if three_d is None:
+            three_d = ert_load.survey_is_3d(pos)
+        y = pos[:, 1] if three_d else np.zeros_like(x)
+        if three_d or (pos.shape[1] >= 3 and np.std(pos[:, 2]) > 1e-9):
             z = pos[:, 2]
         elif pos.shape[1] >= 2:
             z = pos[:, 1]
@@ -2397,11 +2429,12 @@ class ERTProcessingModule(BaseModule):
         m = np.asarray(data["m"], dtype=int)
         nn = np.asarray(data["n"], dtype=int)
         rhoa = np.asarray(data["rhoa"], dtype=float) if data.haveData("rhoa") else np.full(data.size(), np.nan)
-        elec = [(float(x[i]), float(z[i])) for i in range(len(x))]
+        elec = [(float(x[i]), float(z[i]), float(y[i])) for i in range(len(x))]
         pseudo = self._build_pseudo_from_indices(x, a, b, m, nn, rhoa)
-        return elec, pseudo, int(data.size()), data, ""
+        return elec, pseudo, int(data.size()), data, "", bool(three_d)
 
-    def _load_resipy(self, path: str, instrument: str, out_dir, electrode_file, spacing):
+    def _load_resipy(self, path: str, instrument: str, out_dir, electrode_file, spacing,
+                     three_d: Optional[bool] = None):
         from PyHydroGeophysX.data_processing.ert_data_agent import load_ert_resipy
 
         project_dir = str(Path(out_dir) / "resipy_project")
@@ -2410,9 +2443,11 @@ class ERTProcessingModule(BaseModule):
             spacing=spacing, electrode_file=electrode_file,
         )
         electrodes = std.electrodes or []
-        elev = self._electrode_elevation(electrodes)
-        elec = [(float(e.x), float(elev[i])) for i, e in enumerate(electrodes)]
-        data = self._standard_to_pg(std)
+        positions, three_d = ert_load.electrode_positions(electrodes, three_d)
+        # (x, elevation, y): a profile's elevation is its container's y.
+        elec = [(float(row[0]), float(row[2] if three_d else row[1]),
+                 float(row[1] if three_d else 0.0)) for row in positions]
+        data = self._standard_to_pg(std, three_d)
         note = ""
         if data is not None:
             # Use the corrected apparent resistivity (rhoa = R * k) for QC display.
@@ -2436,7 +2471,7 @@ class ERTProcessingModule(BaseModule):
         # format (PRIME, Subsurface Insights) is read as that whatever was chosen.
         read_as = str(getattr(std, "instrument", "") or instrument)
         return (elec, pseudo, len(std.observations or []), data, note,
-                self._reader_of(std), read_as)
+                self._reader_of(std), read_as, three_d)
 
     @staticmethod
     def _reader_of(std) -> Tuple[str, str]:
@@ -2693,7 +2728,7 @@ class ERTProcessingModule(BaseModule):
             )
 
     def _max_k_set_by_hand(self, _value: float) -> None:
-        """Keep a |k| cap somebody typed: files loaded afterwards no longer set it."""
+        """Keep a |k| cap somebody typed: files loaded afterwards do not overwrite it."""
         self._qc_max_k_follows_file = False
 
     def _refresh_error_sources(self, data) -> None:
@@ -2858,8 +2893,8 @@ class ERTProcessingModule(BaseModule):
 
         ``scores`` is the survey's reciprocal pairing when already made - of the
         survey as read, when ``data`` is its averaged copy - and ``reciprocal``
-        the reciprocal error of each row of ``data``, which an averaged copy can
-        no longer be paired to find.
+        the reciprocal error of each row of ``data``, which an averaged copy
+        cannot be paired to find.
         """
         rhoa = np.asarray(data["rhoa"], dtype=float)
         total = int(rhoa.size)
@@ -2969,7 +3004,7 @@ class ERTProcessingModule(BaseModule):
                     f"<= {qc['max_contact_r']:g} ohm",
                     "" if qc["max_contact_r"] <= 0 else
                     "not applied: no contact resistance column")
-        # .get: QC settings saved before this check existed do not name it.
+        # .get: QC settings saved without this check do not name it.
         stack = qc.get("max_stack", 0.0)
         if stack > 0 and data.haveData("stack"):
             cut(np.asarray(data["stack"], dtype=float) <= qc["max_stack"] / 100.0,
@@ -3283,30 +3318,40 @@ class ERTProcessingModule(BaseModule):
             slot.pop(next(iter(slot)))
 
     @staticmethod
-    def _read_electrodes(path: str) -> Tuple[List[float], List[float], str]:
-        """``(x, z, how)`` from an electrode file, its columns chosen by meaning.
+    def _read_electrodes(path: str) -> Tuple[List[float], List[float], List[float], str, bool]:
+        """``(x, y, z, how, three_d)`` from an electrode file, its columns chosen by meaning.
 
         ``table_io.read_electrode_table`` decides, the reader the data loaders
         use as well, and z is each electrode's elevation. Taking the first
         column as x and the last as z read an ID column as the elevation, the
         electrode number as the position, or - for a table written the PyGIMLi
-        way, x, elevation, 0 - a flat line at zero.
+        way, x, elevation, 0 - a flat line at zero. Electrodes that cover an
+        area are a 3-D survey's (``ert_io.read_electrode_layout``) and keep
+        their y; a profile's y is 0.
         """
-        coords, elevation, how = table_io.read_electrode_table(path)
-        return coords[:, 0].tolist(), elevation.tolist(), how
+        positions, three_d, how = ert_load.read_electrode_layout(path)
+        z = positions[:, 2] if three_d else positions[:, 1]
+        y = positions[:, 1] if three_d else np.zeros(len(positions))
+        return positions[:, 0].tolist(), y.tolist(), z.tolist(), how, three_d
 
-    def _electrode_table_for(self, path: str, x: List[float], z: List[float]) -> Optional[Path]:
+    def _electrode_table_for(self, path: str, x: List[float], z: List[float],
+                             y: Optional[List[float]] = None) -> Optional[Path]:
         """A plain x y z copy of ``path`` for the readers, or None if none can be written.
 
         The instrument readers take the electrode file as positional x y z
         columns, so the vendor table itself would be misread there the way it
         was here. They get the columns as chosen above instead. Each file gets a
         copy of its own, so the one in use survives a file that is refused.
+        A 3-D survey's copy (``y`` given) names its columns, which is what
+        keeps a flat grid's y a coordinate rather than an elevation.
         """
         try:
             table = (self.state.ensure_results_store().scratch_dir(self.module_key)
                      / f"electrodes_xyz_{uuid.uuid4().hex[:8]}.txt")
-            np.savetxt(table, np.column_stack([x, np.zeros(len(x)), z]))
+            if y is not None:
+                np.savetxt(table, np.column_stack([x, y, z]), header="x y z", comments="")
+            else:
+                np.savetxt(table, np.column_stack([x, np.zeros(len(x)), z]))
             return table
         except Exception as exc:  # noqa: BLE001
             self.log(f"Later loads cannot use {Path(path).name}: {exc}", "warn")
@@ -3330,13 +3375,18 @@ class ERTProcessingModule(BaseModule):
         """
         name = Path(path).name
         try:
-            x, z, how = self._read_electrodes(path)
+            x, y, z, how, three_d = self._read_electrodes(path)
         except Exception as exc:  # noqa: BLE001
             return {"status": "failed", "error": f"Could not load electrodes: {exc}"}
-        table = self._electrode_table_for(path, x, z)
+        table = self._electrode_table_for(path, x, z, y if three_d else None)
+        if three_d:
+            how += "; they cover an area, a 3-D survey"
         if self._ert_data is None or self._data_path is None:
             self._x = [float(v) for v in x]
+            self._y = [float(v) for v in y]
             self._z = [float(v) for v in z]
+            self._survey_3d = bool(three_d)
+            self._sync_survey_dimension()
             self._labels = [str(i + 1) for i in range(len(self._x))]
             self._electrode_origins = [None] * len(self._x)
             self._electrode_table = table
@@ -3814,6 +3864,9 @@ class ERTProcessingModule(BaseModule):
             "e4d": dict(summary.get("e4d") or {}),
             "r2": dict(summary.get("r2") or {}),
             "r3t": dict(summary.get("r3t") or {}),
+            # A profile inverted on a 3D mesh: the whole model beside the section.
+            "vtk_3d_path": self._abs_path(summary.get("vtk_3d_path")),
+            "volume": dict(summary.get("volume") or {}),
             "data_path": source,
         }
         try:
@@ -4015,7 +4068,7 @@ class ERTProcessingModule(BaseModule):
 
         # The library already logged the stage-by-stage detail while it ran. Only
         # add what it could not know, and only once: a second copy of the same
-        # sentence is what turned this panel into a wall of text.
+        # sentence turns this panel into a wall of text.
         chi2 = result.get("chi2")
         summary = f"ERT inversion complete: χ² = {chi2:.2f}" if chi2 == chi2 \
             else "ERT inversion complete"
@@ -4063,6 +4116,20 @@ class ERTProcessingModule(BaseModule):
         vtk = result.get("vtk")
         if vtk:
             self.log(f"Saved {Path(vtk).name} to {Path(vtk).parent}", "info")
+        volume = str(result.get("vtk_3d_path") or "")
+        solid = dict(result.get("volume") or {})
+        # A 3-D survey's model is the volume, drawn in place; a profile's
+        # section has its volume one click away.
+        self._model_3d_row.setVisible(bool(volume) and not solid.get("survey_3d"))
+        self._model_3d_path = volume
+        if solid.get("survey_3d"):
+            self.log(f"Inverted in 3D on {solid.get('cells', '?')} cells; the model is "
+                     f"drawn in 3D (tick Clip plane to look inside) and saved as "
+                     f"{Path(volume).name}.", "info")
+        elif volume:
+            self.log(f"Inverted in 3D on {solid.get('cells', '?')} "
+                     f"cells; the section along the line is shown, and the whole model is "
+                     f"{Path(volume).name} (Open 3D model, above the section).", "info")
         e4d = dict(result.get("e4d") or {})
         if e4d.get("run_dir"):
             self.log(f"E4D's own files (e4d.log, sigma.N) and the 3D model "
@@ -4164,7 +4231,7 @@ class ERTProcessingModule(BaseModule):
             "Inverts on an externally built mesh instead of one generated from "
             "the electrode positions. PyGIMLi .bms, Gmsh .msh, VTK, .poly, or an "
             "E4D mesh (.1.node / .1.ele, with its .trn). An E4D mesh configuration "
-            "(.cfg) is meshed the way E4D does it, once, on import. "
+            "(.cfg) is meshed once, on import. "
             "The region to invert must carry marker 2 or above; marker 0 and 1 "
             "are treated as background and stay fixed - for an E4D mesh, zone 1 "
             "is the background. The file is checked against the survey before the "
@@ -4181,6 +4248,17 @@ class ERTProcessingModule(BaseModule):
         self._mesh_note.setWordWrap(True)
         theme.set_tone(self._mesh_note, "hint")
         form.addRow("", self._mesh_note)
+        # A 3D mesh is built in the 3D Mesh Builder around these electrodes and
+        # comes back here as the imported mesh.
+        self._mesh3d_btn = QPushButton("Build a 3D mesh…")
+        self._mesh3d_btn.setIcon(theme.icon("fa5s.cubes"))
+        self._mesh3d_btn.setToolTip(
+            "Open the 3D Mesh Builder with these electrodes - a profile as a line at "
+            "y = 0 - to build a 3D mesh around them with PyGIMLi, Gmsh or the E4D "
+            "mesher. Its Use for ERT inversion button brings the mesh back here as "
+            "the imported mesh, shown in 3D on this tab.")
+        self._mesh3d_btn.clicked.connect(self._build_3d_mesh)
+        form.addRow("", self._mesh3d_btn)
 
         def section(title: str, text: str) -> None:
             form.addRow(QLabel(f"<b>{title}</b>"))
@@ -4312,6 +4390,8 @@ class ERTProcessingModule(BaseModule):
             "outer_width": float(self._outer_width.value()),
             "outer_max_cell_size": float(self._outer_max_cell.value()),
             "mesh_file": str(self._mesh_path or ""),
+            # Only when on, so a profile's recipe reads as it always has.
+            **({"survey_3d": True} if self._survey_3d else {}),
         }
 
     def _update_mesh_link(self) -> None:
@@ -4410,11 +4490,37 @@ class ERTProcessingModule(BaseModule):
         built_from = f" (built from {source})" if source != Path(path).name else ""
         summary = (f"<b>{Path(path).name}</b>{built_from}: {mesh.cellCount()} cells "
                    f"({invertible} inverted), {mesh.dim()}D.")
+        if mesh.dim() == 3 and self._ert_data is not None:
+            summary += " The profile is inverted along x at y = 0, and its section shown."
         self._mesh_note.setText(summary)
         self._sync_mesh_source()
         self.log(f"Imported inversion mesh {Path(path).name}: "
                  f"{mesh.cellCount()} cells, {invertible} inverted.", "success")
+        if mesh.dim() == 3 and invertible > 20000:
+            self.log(f"{invertible} inverted cells in 3D: PyGIMLi solves each forward run "
+                     "on about eight times as many cells, and the in-house inversion holds "
+                     "a Jacobian of every reading by every cell, so expect minutes per "
+                     "iteration and several GB of memory. Larger cells away from the "
+                     "electrodes cut both.", "warn")
         return summary
+
+    def _build_3d_mesh(self) -> None:
+        """Hand the electrodes to the 3D Mesh Builder; with none, just open it.
+
+        A profile's electrodes go over as a line at y = 0, a 3-D survey's
+        where they are.
+        """
+        if not self._x:
+            self.navigateRequested.emit("mesh3d")
+            return
+        folder = self.state.ensure_results_store().scratch_dir(self.module_key)
+        stem = self._data_path.stem if self._data_path else "survey"
+        path = table_io.write_csv(
+            Path(folder) / f"{stem}_electrodes.csv",
+            [(float(x), float(y) if self._survey_3d else 0.0, float(z))
+             for x, y, z in zip(self._x, self._y, self._z)],
+            header=("x", "y", "z"))
+        self.handoffRequested.emit("mesh3d", "load_sensor_file", {"path": str(path)})
 
     def _clear_mesh(self) -> None:
         self._mesh_path = ""
@@ -4424,24 +4530,36 @@ class ERTProcessingModule(BaseModule):
 
     def _sync_mesh_source(self) -> None:
         """An imported mesh describes its own domain, so the sizing knobs are
-        dead, and it cannot be rebuilt along the zone outlines either."""
+        dead, and it cannot be rebuilt along the zone outlines either. A 3-D
+        survey's generated mesh (``ert_mesh.survey_volume_mesh``) has no
+        surface nodes, no outer cell size and no zone outlines."""
         generated = not self._mesh_path
+        profile_only = (self._surface_nodes, self._outer_max_cell)
         for widget in self._generated_mesh_widgets():
-            widget.setEnabled(generated)
+            acts = generated and not (self._survey_3d and widget in profile_only)
+            widget.setEnabled(acts)
             label = self.row_label(widget)
             if label is not None:
-                label.setEnabled(generated)
+                label.setEnabled(acts)
         self._mesh_defaults.setEnabled(generated)
         self._mesh_tab.set_conform_available(
-            generated, "" if generated else
+            generated and not self._survey_3d,
+            "" if generated and not self._survey_3d else
+            "Zones are drawn on 2-D sections; a 3-D survey's mesh is built without "
+            "them." if generated else
             "An imported mesh is inverted as it is, so it cannot be rebuilt along "
             "the zone outlines. Go back to a generated mesh to use this.")
         self._mesh_inputs_changed()
 
+    def _sync_survey_dimension(self) -> None:
+        """Follow a change between a profile and a 3-D survey: the mesh settings
+        that act, and the Data tab's view (a pseudosection or a plan)."""
+        self._sync_mesh_source()
+
     # -- mesh preview and a-priori zones -------------------------------------
     def _electrode_rows(self) -> List[Dict[str, Any]]:
         """The electrodes as edited here, in the form the data are saved with."""
-        return [
+        rows = [
             {
                 "order": index,
                 "label": self._labels[index],
@@ -4451,10 +4569,14 @@ class ERTProcessingModule(BaseModule):
             }
             for index in range(len(self._x))
         ]
+        if self._survey_3d:
+            for row, y in zip(rows, self._y):
+                row["y"] = float(y)
+        return rows
 
     def _zone_parameters(self) -> Dict[str, Any]:
         """The a-priori zones for a recipe; nothing when there are none, so a run
-        without zones records exactly what it did before they existed. The two
+        without zones records no zone entries. The two
         zone options are recorded only when on - and rebuilding along the
         outlines only for a generated mesh, the one it can rebuild."""
         zones = self._mesh_tab.zones()
@@ -4547,7 +4669,8 @@ class ERTProcessingModule(BaseModule):
         elif self._ert_data is not None:
             rows = self._electrode_rows()
             key = ("single", id(self._ert_data),
-                   tuple((r["x"], r["z"], r["original_index"]) for r in rows), settings)
+                   tuple((r["x"], r.get("y"), r["z"], r["original_index"]) for r in rows),
+                   settings)
             args = ("single", self._ert_data, None, rows)
             where = self._data_path.name if self._data_path else "the loaded survey"
         elif mesh_file:
@@ -4632,6 +4755,15 @@ class ERTProcessingModule(BaseModule):
         mesh = build_inversion_mesh(data, **options, report=report)
         preview = mesh_preview(mesh, data)
         preview["build"] = report
+        if preview["dim"] == 3:
+            # Made here, off the UI thread: a volume of a few hundred thousand
+            # cells takes seconds. Without PyVista the tab says so.
+            from PyHydroGeophysX.qt_apps.widgets.mesh_preview import volume_parts
+
+            try:
+                preview.update(volume_parts(mesh))
+            except Exception as exc:  # noqa: BLE001 - the counts still show
+                preview["grid_error"] = str(exc)
         if data is not None and data.haveData("rhoa"):
             rhoa = np.asarray(data["rhoa"], dtype=float)
             rhoa = rhoa[np.isfinite(rhoa) & (rhoa > 0)]
@@ -4712,7 +4844,7 @@ class ERTProcessingModule(BaseModule):
         ``survey_timing.reciprocal_pairs`` finds them by name and time; the
         pairs hold while "Pair reciprocal files" is ticked, and the box is shown
         only when the list holds a file named as a reciprocal. Unticked, or with
-        none, every file is a survey of its own, as before pairing existed.
+        none, every file is a survey of its own.
         """
         paths = list(self._tl_all)
         self._tl_partner, self._tl_left_out = {}, []
@@ -4828,7 +4960,7 @@ class ERTProcessingModule(BaseModule):
         if n == 0:
             self._tl_info.setText("No files added.")
         # The format is not repeated here: it is chosen two rows up, and a copy
-        # of it went stale the moment the format was changed.
+        # of it would go stale as soon as the format is changed.
         elif n == 1:
             self._tl_info.setText("<b>1</b> survey; add more for a time-lapse series."
                                   + self._tl_pairs_text(timing))
@@ -5001,8 +5133,8 @@ class ERTProcessingModule(BaseModule):
         chosen = set(rows)
         # The selection moves as a block: a row steps past an unselected
         # neighbour, and one against the edge - or behind a selected row that
-        # is - stays put. Swapped one at a time, a block already at the top was
-        # reversed, and the top row is the baseline every survey is compared to.
+        # is - stays put. Swapped one at a time, a block already at the top would
+        # be reversed, and the top row is the baseline every survey is compared to.
         steps = range(1, len(order)) if delta < 0 else range(len(order) - 2, -1, -1)
         for i in steps:
             j = i - 1 if delta < 0 else i + 1
@@ -5137,7 +5269,7 @@ class ERTProcessingModule(BaseModule):
             self.log(f"Could not prepare Project run: {exc}", "error")
             return
         # Drop this module's references to the previous run's arrays before the
-        # new one writes. They are ordinary in-memory arrays now, but releasing
+        # new one writes. They are ordinary in-memory arrays, but releasing
         # them keeps a stale model out of the viewer if the run fails.
         self._tl_models = None
         self._tl_models_raw = None
@@ -5151,7 +5283,7 @@ class ERTProcessingModule(BaseModule):
         # keeps the sequence as it stood when Run was pressed.
         sources, labels = list(self._tl_files), list(self._tl_labels)
         # The electrode file places every survey's electrodes, as it placed the
-        # survey on screen. The run used to read each file's own header instead,
+        # survey on screen; otherwise the run would read each file's own header
         # while the preview showed the electrode file's positions.
         electrodes = self._electrode_file()
         if electrodes is not None:
@@ -5195,8 +5327,8 @@ class ERTProcessingModule(BaseModule):
                                                electrodes, [dict(e) for e in cached],
                                                reader, left_out, fit_to)
                 return
-        # The QC applied on this page holds for the whole series, as it did for
-        # the survey on screen. Each survey is filtered on its own - the
+        # The QC applied on this page holds for the whole series, as for the
+        # survey on screen. Each survey is filtered on its own - the
         # pipeline accepts surveys with different measurement sets, and ADTLERT
         # aligns them - and handed over in PyGIMLi's own format, which it reads
         # back as written, as the single inversion's filtered data is. A survey
@@ -5255,8 +5387,8 @@ class ERTProcessingModule(BaseModule):
         self._tl_progress.setValue(0)
         self._tl_progress.setFormat(f"Data QC 0/{len(sources)}")
         worker.start()
-        # Reading every survey takes most of a second each, minutes for a long
-        # series, so the QC can be stopped like the inversion that follows it.
+        # Reading every survey takes minutes for a long series, so the QC can
+        # be stopped like the inversion that follows it.
         self._tl_stop.attach(worker, "ert.timelapse_inversion", "The time-lapse data QC")
 
     @staticmethod
@@ -5310,7 +5442,7 @@ class ERTProcessingModule(BaseModule):
         if match is not None:
             done, total = int(match.group(1)), int(match.group(2))
             self._on_tl_progress(done, total, f"Data QC {done}/{total}")
-            # The status bar too: reading 420 surveys takes minutes, and a bare
+            # The status bar too: reading a long series takes minutes, and a bare
             # "Checking data quality" for that long reads as a hang.
             worker = getattr(self, "_tl_qc_worker", None)
             if worker is not None:
@@ -5410,8 +5542,8 @@ class ERTProcessingModule(BaseModule):
         ``qc/`` folder as it is prepared - a survey that stops the series
         included - and ``qc_report.txt`` sums them up at the end, naming the
         reciprocal files ``left_out`` for want of a forward file. Once the
-        series' model is known each log is written again with it at the top,
-        as Craig Ulrich's logs carry it (:meth:`_finish_series_qc`).
+        series' model is known each log is written again with it at the top
+        (:meth:`_finish_series_qc`).
         """
         from PyHydroGeophysX.qt_apps import ert_records
         from PyHydroGeophysX.qt_apps.run_records import QC_FOLDER
@@ -5550,7 +5682,7 @@ class ERTProcessingModule(BaseModule):
         electrodes_ref = None
         # One compressed bundle rather than a copy of every step. A time-lapse
         # run is as many raw files as it has time steps, and BERT data files are
-        # ASCII, so this is where the run directory grew fastest.
+        # ASCII, so loose copies would be the bulk of the run directory.
         try:
             stored = run_inputs.save_file_bundle(
                 run.inputs_dir / "ert_timesteps",
@@ -5743,11 +5875,11 @@ class ERTProcessingModule(BaseModule):
             coverage_path = resolve(paths.get("coverage", ""))
             # Read into memory rather than memory-mapping. A mapping stays open for
             # as long as the viewer holds the array, and Windows refuses to let the
-            # next run overwrite a mapped file: np.save then fails with
+            # next run overwrite a mapped file: np.save fails with
             # "OSError: [Errno 22] Invalid argument" after the inversion has already
-            # finished, leaving the previous run's arrays on disk beside this run's
-            # figures. These are per-cell result arrays, small enough that mapping
-            # bought nothing.
+            # finished, leaving the previous run's arrays on disk beside the new
+            # run's figures. These are per-cell result arrays, small enough that
+            # mapping buys nothing.
             return {
                 # Without the cell-neighbour table, as in _load_model_bundle.
                 "mesh": read_bms(mesh_path, neighbours=False),
@@ -5818,6 +5950,14 @@ class ERTProcessingModule(BaseModule):
                  f"{result.get('n_times')} steps, {result.get('mesh_cells')} cells. "
                  f"Saved VTK (combined + {n_vtk} per-step), npy, mesh. "
                  f"Pick a step in the Resistivity model tab; “Export results…” saves them.", "success")
+        solid = dict(result.get("volume") or {})
+        if solid.get("survey_3d"):
+            self.log(f"Each step is a 3D model on {solid.get('cells', '?')} cells, drawn in "
+                     "3D; the overview figure shows them in plan.", "info")
+        elif solid:
+            self.log(f"Inverted in 3D on {solid.get('cells', '?')} cells; each step is "
+                     "shown as the section along the line, and Open 3D model shows its "
+                     "volume.", "info")
         if requested_engine == "adtlert" and engine != "adtlert":
             self.log(
                 "ADTLERT was requested but the time-lapse run used the original "
@@ -5870,9 +6010,19 @@ class ERTProcessingModule(BaseModule):
         self._tl_view_mode.setCurrentIndex(0)
         self._tl_view_mode.blockSignals(False)
         self._tl_step_row.setVisible(n > 1)
+        # A profile's series inverted in 3-D: each step's volume one click away.
+        self._model_3d_row.setVisible(bool(self._tl_volume_paths()))
         self._seed_tl_color_range()
         self._show_tl_step(0)
         self._tabs.setCurrentWidget(self._model_tab)
+
+    def _tl_volume_paths(self) -> List[str]:
+        """Each step's whole volume, when a profile's series was inverted in 3-D."""
+        base = (Path(self._tl_recipe_path).resolve().parent
+                if self._tl_recipe_path else Path.cwd())
+        return [str(path if path.is_absolute() else base / path)
+                for path in (Path(str(p)) for p in
+                             (self._tl_result or {}).get("vtk_3d_step_paths") or [])]
 
     def _step_tl(self, delta: int) -> None:
         n = self._tl_step_combo.count()
@@ -5938,6 +6088,9 @@ class ERTProcessingModule(BaseModule):
         # A corrected section looks exactly like an uncorrected one, so its
         # title says which it is.
         title += temperature_panel.title_suffix(self._tl_correction)
+        volumes = self._tl_volume_paths()
+        if idx < len(volumes):
+            self._model_3d_path = volumes[idx]
         self._model_view.show_field(self._tl_mesh, values, kind=kind, coverage=cov, title=title)
 
     def _on_tl_failed(self, message: str, backend: bool) -> None:
@@ -5990,8 +6143,8 @@ class ERTProcessingModule(BaseModule):
 
         Chosen here, on the page, the export runs on a worker thread with its
         progress in the status bar: for a long series it is hundreds of VTK
-        files and a table of millions of numbers, which held the window still
-        for half a minute. Given a ``folder`` - the assistant's export - it runs
+        files and a table of millions of numbers, which would hold the window
+        still. Given a ``folder`` - the assistant's export - it runs
         to the end before returning, as that caller expects.
         """
         if not self._tl_result:
@@ -6189,6 +6342,20 @@ class ERTProcessingModule(BaseModule):
         x = np.asarray(self._x, dtype=float)
         z = np.asarray(self._z, dtype=float)
         parts = [f"{count} electrode{'s' if count != 1 else ''}"]
+        if self._survey_3d:
+            from scipy.spatial import cKDTree
+
+            plan = np.column_stack([x, np.asarray(self._y, dtype=float)])
+            plan = np.unique(plan[np.isfinite(plan).all(axis=1)], axis=0)
+            if len(plan) > 1:
+                near = cKDTree(plan).query(plan, k=2)[0][:, 1]
+                width, length = np.ptp(plan, axis=0) * factor
+                parts.append(f"over {width:.4g} × {length:.4g} {unit}")
+                parts.append(f"{np.median(near) * factor:.3g} {unit} apart")
+            if np.any(np.abs(z[np.isfinite(z)]) > 1.0e-6):
+                parts.append(f"elevation {np.nanmin(z) * factor:.4g} to "
+                             f"{np.nanmax(z) * factor:.4g} {unit}")
+            return ", ".join(parts)
         gaps = np.diff(np.unique(x[np.isfinite(x)]))
         gaps = gaps[gaps > 1.0e-9]
         if gaps.size:
@@ -6220,8 +6387,7 @@ class ERTProcessingModule(BaseModule):
     def _pseudosection_problem(self) -> str:
         """What the Data tab says when the file loaded gives no section to draw.
 
-        In words a user can act on; it read "All x/depth values are invalid, or
-        apparent resistivity is missing, non-finite, or non-positive."
+        In words a user can act on, rather than a list of numeric conditions.
         """
         name = self._data_path.name if self._data_path is not None else ""
         if name and self._data_note:
@@ -6241,8 +6407,67 @@ class ERTProcessingModule(BaseModule):
                 x, np.zeros_like(x), marker="v", s=24, color=_ELECTRODE_MARK,
                 linewidths=0, clip_on=False, zorder=5)
 
+    def _draw_plan_view(self) -> None:
+        """A 3-D survey in plan, as the pseudosection draws a profile.
+
+        Each reading sits at the middle of its electrodes, coloured by its
+        apparent resistivity; readings that share a middle are one dot, their
+        median. The electrodes are drawn over them.
+        """
+        ax = self._pseudo_ax
+        ax.clear()
+        ax.set_axis_on()
+        ex, ey = np.asarray(self._x, dtype=float), np.asarray(self._y, dtype=float)
+        data = self._ert_data
+        title = f"{self._electrode_summary()}. Add data files to see the readings."
+        self._pseudo_legend.setVisible(False)
+        if data is not None and int(data.size()) and data.haveData("rhoa"):
+            index = np.column_stack([np.asarray(data[t], dtype=int) for t in "abmn"])
+            sensors = np.asarray(data.sensorPositions(), dtype=float)[:, :2]
+            used = index >= 0
+            spots = np.where(used[..., None], sensors[np.maximum(index, 0)], 0.0)
+            middle = spots.sum(axis=1) / np.maximum(used.sum(axis=1), 1)[:, None]
+            rhoa = np.asarray(data["rhoa"], dtype=float)
+            valid = np.isfinite(rhoa) & (rhoa > 0) & np.isfinite(middle).all(axis=1)
+            if valid.any():
+                keys, inverse = np.unique(np.round(middle[valid], 3), axis=0,
+                                          return_inverse=True)
+                inverse = np.asarray(inverse).reshape(-1)
+                logs = np.log10(rhoa[valid])
+                median = np.array([np.median(logs[inverse == k]) for k in range(len(keys))])
+                lo, hi = np.percentile(logs, [3, 97])
+                if hi <= lo:
+                    lo, hi = float(lo) - 0.5, float(hi) + 0.5
+                low, high = self._pseudo_range.limits(10.0 ** float(lo), 10.0 ** float(hi))
+                lo, hi = np.log10(low), np.log10(high)
+                lut = self._cmap.map(np.clip((median - lo) / (hi - lo), 0.0, 1.0), mode="byte")
+                rgba = np.ones((len(lut), 4), dtype=float)
+                rgba[:, :3] = np.asarray(lut[:, :3], dtype=float) / 255.0
+                ax.scatter(keys[:, 0], keys[:, 1], s=34, c=rgba, marker="o",
+                           edgecolors="#394b59", linewidths=0.35)
+                for label, value in zip(self._pseudo_scale_labels,
+                                        np.power(10.0, np.linspace(lo, hi, 5))):
+                    label.setText(f"{float(value):.4g}")
+                self._pseudo_legend.setVisible(True)
+                kept = rhoa[valid]
+                title = (f"{kept.size:,} readings at {len(keys):,} midpoints (plan), "
+                         f"{kept.min():.3g}–{kept.max():.3g} Ω·m   ▲ electrodes")
+        finite = np.isfinite(ex) & np.isfinite(ey)
+        ax.scatter(ex[finite], ey[finite], marker="^", s=26, color=_ELECTRODE_MARK,
+                   linewidths=0, zorder=5)
+        ax.set_aspect("equal", adjustable="datalim")
+        set_length_axis(ax, "x", "x")
+        set_length_axis(ax, "y", "y")
+        ax.grid(True, which="major", alpha=0.28)
+        ax.set_title(title)
+        self._pseudo_canvas.draw_idle()
+        self._pseudo_toolbar.update()
+
     def _draw_electrodes_only(self) -> None:
         """Electrodes and no data yet - an electrode file read before the data."""
+        if self._survey_3d:
+            self._draw_plan_view()
+            return
         x = np.asarray(self._x, dtype=float)
         x = x[np.isfinite(x)]
         ax = self._pseudo_ax
@@ -6260,6 +6485,9 @@ class ERTProcessingModule(BaseModule):
         self._pseudo_toolbar.update()
 
     def _draw_pseudosection(self) -> None:
+        if self._survey_3d and self._x and not self._data_note:
+            self._draw_plan_view()
+            return
         if not self._pseudo:
             if self._x and not self._data_note:
                 self._draw_electrodes_only()
@@ -6344,12 +6572,14 @@ class ERTProcessingModule(BaseModule):
 
     # -- electrodes ----------------------------------------------------------
     def _delete(self, idx: int) -> None:
-        for seq in (self._x, self._z, self._labels, self._electrode_origins):
+        for seq in (self._x, self._z, self._y, self._labels, self._electrode_origins):
             del seq[idx]
         self._refresh()
 
     def _clear(self) -> None:
-        self._x, self._z, self._labels, self._electrode_origins = [], [], [], []
+        self._x, self._z, self._y, self._labels, self._electrode_origins = [], [], [], [], []
+        self._survey_3d = False
+        self._sync_survey_dimension()
         self._refresh()
 
     # -- rendering / publish -------------------------------------------------
@@ -6395,6 +6625,9 @@ class ERTProcessingModule(BaseModule):
         self._mesh_inputs_changed()
 
     def _coords(self) -> List[List[float]]:
+        """``[x, z]`` per electrode; ``[x, y, z]`` for a 3-D survey."""
+        if self._survey_3d:
+            return [[self._x[i], self._y[i], self._z[i]] for i in range(len(self._x))]
         return [[self._x[i], self._z[i]] for i in range(len(self._x))]
 
     def _export_electrodes(self) -> None:
@@ -6404,8 +6637,13 @@ class ERTProcessingModule(BaseModule):
         path, _ = QFileDialog.getSaveFileName(self, "Export electrodes", "electrodes.csv", "CSV (*.csv)")
         if not path:
             return
-        rows = [(self._labels[i], self._x[i], self._z[i]) for i in range(len(self._x))]
-        io_utils.write_csv(path, rows, header=["label", "x", "z"])
+        if self._survey_3d:
+            rows = [(self._labels[i], self._x[i], self._y[i], self._z[i])
+                    for i in range(len(self._x))]
+            io_utils.write_csv(path, rows, header=["label", "x", "y", "z"])
+        else:
+            rows = [(self._labels[i], self._x[i], self._z[i]) for i in range(len(self._x))]
+            io_utils.write_csv(path, rows, header=["label", "x", "z"])
         self._electrode_path = Path(path)
         self.log(f"Exported {len(rows)} electrodes to {path}", "success")
         self._publish()
@@ -6468,9 +6706,9 @@ class ERTProcessingModule(BaseModule):
                 units="ohm.m", coverage=cov,
             )
             # numpy takes wide paths, PyGIMLi's writers do not; a folder Windows'
-            # ANSI codepage cannot represent needs the write staged through a
-            # temporary ASCII one. Export to a localized "文档" folder otherwise
-            # writes the .npy and then fails on the .bms.
+            # ANSI codepage cannot represent (a localized "Documents" folder,
+            # say) needs the write staged through a temporary ASCII one.
+            # Otherwise the .npy is written and the .bms fails.
             via_ascii_path(mesh.save, out / "resistivity_mesh.bms", mode="write")
             mesh["resistivity"] = model
             via_ascii_path(mesh.exportVTK, out / "resistivity_model.vtk", mode="write")
@@ -6544,10 +6782,10 @@ class ERTProcessingModule(BaseModule):
         electrodes = inputs.get("electrode_file")
         # The run's instrument, not this panel's. There is no format auto-detect
         # anywhere here - the device is chosen, not guessed - so leaving the
-        # dropdown on its own default read the run's files with the wrong
+        # dropdown on its own default would read the run's files with the wrong
         # reader: an E4D .ohm parsed as a unified file has its leading index
         # column taken for electrode A, and every quadrupole then lands out of
-        # bounds. The panel listed the files and drew nothing.
+        # bounds, so the panel would list the files and draw nothing.
         instrument = str(inputs.get("instrument") or "").strip()
         if not instrument and (surveys or single):
             # Nobody chose one, so the header decides - as it does in the run.
@@ -6574,8 +6812,8 @@ class ERTProcessingModule(BaseModule):
         """Follow the run through this page's own tabs.
 
         Loading belongs on the Data tab, a finished inversion on the model,
-        and the quality check on the quality view. Without this the page stayed
-        on whichever tab it opened with while the run moved on underneath it.
+        and the quality check on the quality view. Without this the page would
+        stay on whichever tab it opened with while the run moves on underneath it.
         """
         views = {
             "load_ert_surveys": (self._pseudo_widget, "Data"),
@@ -6595,7 +6833,7 @@ class ERTProcessingModule(BaseModule):
         try:
             from PyHydroGeophysX.agents.ert_loader_agent import ERTLoaderAgent
 
-            return str(ERTLoaderAgent()._detect_instrument_from_header(str(path)) or "")
+            return str(ERTLoaderAgent(api_key="")._detect_instrument_from_header(str(path)) or "")
         except Exception:  # noqa: BLE001 - nothing detected is no choice made
             return ""
 
@@ -6619,14 +6857,18 @@ class ERTProcessingModule(BaseModule):
                           "(no auto-detect). One of: " +
                           ", ".join(v for _, v in _INSTRUMENTS if v) + ".")},
                 {"name": "load_electrodes", "args": {"path": "str"},
-                 "desc": "Load an optional electrode geometry file (x, z table)."},
+                 "desc": ("Load an optional electrode geometry file (x, z table; x, y, z "
+                          "for a 3-D survey's electrodes covering an area).")},
                 {"name": "list_electrodes", "args": {},
-                 "desc": ("List electrodes as index, label, x, z, and whether each came "
-                          "from the loaded file or was added afterwards.")},
+                 "desc": ("List electrodes as index, label, x, z (and y in a 3-D survey), "
+                          "and whether each came from the loaded file or was added "
+                          "afterwards.")},
                 {"name": "add_electrode", "args": {"x": "float", "z": "float",
+                                                   "y": "float (optional, 3-D survey)",
                                                    "label": "str (optional)"},
                  "desc": "Append an electrode at (x, z). It carries no measurements."},
                 {"name": "move_electrode", "args": {"index": "int", "x": "float (optional)",
+                                                    "y": "float (optional, 3-D survey)",
                                                     "z": "float (optional)"},
                  "desc": ("Move electrode `index` (0-based). Give x, z, or both; the "
                           "omitted coordinate is left alone.")},
@@ -6673,7 +6915,7 @@ class ERTProcessingModule(BaseModule):
                           "4), outer_max_cell_size (m^2, 0 = no limit); a value out of "
                           "range is refused, not clipped. mesh_file (path to a "
                           ".bms/.msh/.vtk/.poly mesh, an E4D mesh's .1.node/.1.ele, or "
-                          "an E4D mesh configuration .cfg - meshed the way E4D does it - "
+                          "an E4D mesh configuration .cfg, meshed on import, "
                           "to invert on instead of a generated one; the region to invert "
                           "needs marker 2 or above, and '' goes back to generating it). "
                           "A-priori zones: zones, a list of {name, polygon: [[x, z], ...] "
@@ -6733,6 +6975,16 @@ class ERTProcessingModule(BaseModule):
                           "mode) and the mesh settings, with the zones on it. Reports "
                           "its cell counts, and how many cells each zone covers, once "
                           "it is built.")},
+                {"name": "import_mesh", "args": {"path": "str"},
+                 "desc": ("Invert on a mesh built elsewhere - .bms, .msh, .vtk, an E4D "
+                          "mesh (.1.node / .1.ele) or configuration (.cfg), or one the 3D "
+                          "Mesh Builder built. It is read and checked against the loaded "
+                          "survey now, then shown on the Mesh tab, in 3D for a 3D mesh. "
+                          "On a 3D mesh the in-house and PyGIMLi engines invert the "
+                          "profile laid along x at y = 0 and show the section along it; "
+                          "the whole model is saved as resistivity_3d.vtk. A time-lapse "
+                          "series needs a 2D mesh. set_params mesh_file '' goes back to "
+                          "a generated mesh.")},
                 {"name": "run_inversion", "args": {},
                  "desc": ("Run a single-time ERT inversion. Stages run in the order that "
                           "lowers chi2: fix the error model, iterate at the set lambda "
@@ -6775,9 +7027,9 @@ class ERTProcessingModule(BaseModule):
             "load_electrodes": lambda: self._agent_load_electrodes(args.get("path")),
             "list_electrodes": lambda: self._agent_list_electrodes(),
             "add_electrode": lambda: self._agent_add_electrode(
-                args.get("x"), args.get("z"), args.get("label")),
+                args.get("x"), args.get("z"), args.get("label"), args.get("y")),
             "move_electrode": lambda: self._agent_move_electrode(
-                args.get("index"), args.get("x"), args.get("z")),
+                args.get("index"), args.get("x"), args.get("z"), args.get("y")),
             "delete_electrode": lambda: self._agent_delete_electrode(args.get("index")),
             "set_electrode_label": lambda: self._agent_set_electrode_label(
                 args.get("index"), args.get("label")),
@@ -6785,6 +7037,7 @@ class ERTProcessingModule(BaseModule):
             "apply_filter": lambda: self._agent_apply_filter(args),
             "set_params": lambda: self._agent_set_params(args.get("params", args)),
             "preview_mesh": lambda: self._agent_preview_mesh(),
+            "import_mesh": lambda: self._agent_import_mesh(args.get("path")),
             "run_inversion": lambda: self._agent_run_inversion(),
             "add_timelapse_files": lambda: self._agent_add_timelapse_files(
                 args.get("paths"), args.get("append", False)),
@@ -6814,6 +7067,8 @@ class ERTProcessingModule(BaseModule):
             "data_file": str(self._data_path or ""),
             "reciprocal_file": str(self._data_partner or ""),
             "timelapse_files": len(self._tl_files),
+            # Electrodes covering an area: drawn in plan, inverted in 3-D.
+            "survey_3d": self._survey_3d,
             **self._agent_pairing(),
             "average_reciprocal_pairs": self._qc_average.isChecked(),
             "reciprocal_error_floor": self._reciprocal_floor(),
@@ -6975,9 +7230,9 @@ class ERTProcessingModule(BaseModule):
                         "valid": [v for _, v in _INSTRUMENTS if v]}
             self._instrument.setCurrentIndex(idx)
         # The parse runs on the page's load worker - the path a click in the
-        # file list takes - and this waits for it with the window live; it used
-        # to parse right here and freeze the studio for the whole read. Starting
-        # it supersedes a preview still in flight, as this always did.
+        # file list takes - and this waits for it with the window live, so the
+        # studio does not freeze for the whole read. Starting it supersedes a
+        # preview still in flight.
         outcome, value = self._load_and_wait(str(p))
         if outcome == "failed":
             return {"status": "failed", "error": f"Could not load: {value}"}
@@ -7024,20 +7279,23 @@ class ERTProcessingModule(BaseModule):
             "count": len(self._x),
             "electrodes": [
                 {"index": i, "label": self._labels[i], "x": float(self._x[i]),
+                 **({"y": float(self._y[i])} if self._survey_3d else {}),
                  "z": float(self._z[i]),
                  "from_file": self._electrode_origins[i] is not None}
                 for i in range(len(self._x))
             ],
         }
 
-    def _agent_add_electrode(self, x: Any, z: Any, label: Any = None) -> Dict[str, Any]:
+    def _agent_add_electrode(self, x: Any, z: Any, label: Any = None,
+                             y: Any = None) -> Dict[str, Any]:
         if x is None or z is None:
             return {"status": "failed", "error": "Provide both 'x' and 'z'."}
         try:
-            xv, zv = float(x), float(z)
+            xv, zv, yv = float(x), float(z), float(y or 0.0)
         except (TypeError, ValueError):
-            return {"status": "failed", "error": "'x' and 'z' must be numbers."}
+            return {"status": "failed", "error": "'x', 'y' and 'z' must be numbers."}
         self._x.append(xv)
+        self._y.append(yv)
         self._z.append(zv)
         self._labels.append(str(label) if label else f"new-{len(self._x)}")
         self._electrode_origins.append(None)  # carries no measurements
@@ -7045,13 +7303,16 @@ class ERTProcessingModule(BaseModule):
         self.log(f"Added electrode {len(self._x) - 1} at x={xv:g}, z={zv:g}.", "info")
         return {"status": "ok", "index": len(self._x) - 1, "electrodes": len(self._x)}
 
-    def _agent_move_electrode(self, index: Any, x: Any = None, z: Any = None) -> Dict[str, Any]:
-        if x is None and z is None:
-            return {"status": "failed", "error": "Provide 'x', 'z', or both."}
+    def _agent_move_electrode(self, index: Any, x: Any = None, z: Any = None,
+                              y: Any = None) -> Dict[str, Any]:
+        if x is None and z is None and y is None:
+            return {"status": "failed", "error": "Provide 'x', 'y' or 'z'."}
         try:
             idx = self._electrode_index(index)
             if x is not None:
                 self._x[idx] = float(x)
+            if y is not None:
+                self._y[idx] = float(y)
             if z is not None:
                 self._z[idx] = float(z)
         except (ValueError, TypeError) as exc:
@@ -7247,7 +7508,7 @@ class ERTProcessingModule(BaseModule):
             "tl_windowed": lambda v: self._tl_windowed.setChecked(bool(v)),
             "tl_window_size": lambda v: self._tl_window.setValue(int(v)),
             "tl_low_memory": lambda v: self._tl_lowmem.setChecked(bool(v)),
-            # backward-compatible aliases (these params are now shared)
+            # aliases for the time-lapse names (these params are shared)
             "tl_lambda": lambda v: self._lam.setValue(float(v)),
             "tl_iterations": lambda v: self._iter.setValue(int(v)),
             "tl_relative_error": lambda v: self._relerr.setValue(float(v)),
@@ -7267,16 +7528,47 @@ class ERTProcessingModule(BaseModule):
                 ignored[key] = str(exc)
         return {"status": "ok" if applied else "failed", "applied": applied, "ignored": ignored}
 
+    def _declined_since(self, last: Any) -> str:
+        """Why the page did not start a run: the warnings it logged after ``last``."""
+        lines = []
+        for entry in reversed(self._turn_log):
+            if entry is last:
+                break
+            if entry[1] in ("warn", "error"):
+                lines.append(entry[2])
+        return " ".join(reversed(lines)) or "The run did not start."
+
     def _agent_run_inversion(self) -> Dict[str, Any]:
         if self._ert_data is None:
             return {"status": "failed", "error": "Load ERT data with apparent resistivity first."}
+        worker = getattr(self, "_inv_worker", None)
+        last = self._turn_log[-1] if self._turn_log else None
         self._run_inversion()
+        if getattr(self, "_inv_worker", None) is worker:    # the page declined it
+            return {"status": "failed", "error": self._declined_since(last)}
         return {"status": "started", "message": "ERT inversion started. Ask for status shortly.",
                 "lambda": self._lam.value(),
                 "auto_lambda": self._auto_lam.isChecked(),
                 "target_chi2": self._target_chi2.value(),
                 "chi2_tolerance": self._chi2_tol.value(),
                 "max_lambda_trials": self._lam_trials.value()}
+
+    def _agent_import_mesh(self, path: Any) -> Dict[str, Any]:
+        """Import a mesh as the inversion mesh and show it on the Mesh tab."""
+        if not path:
+            return {"status": "failed", "error": "Provide 'path' to a mesh file."}
+        p = Path(str(path))
+        if not p.exists():
+            return {"status": "failed", "error": f"File not found: {p}"}
+        try:
+            summary = self._apply_mesh_file(str(p))
+        except Exception as exc:  # noqa: BLE001 - said next to the button and returned
+            self._mesh_note.setText(
+                f"<span style='color:{theme.color('red')}'>{p.name}: {exc}</span>")
+            self.log(f"Could not import the mesh {p.name}: {exc}", "error")
+            return {"status": "failed", "error": str(exc)}
+        self._tabs.setCurrentWidget(self._mesh_tab)
+        return {"status": "ok", "mesh": re.sub(r"<[^>]+>", "", summary)}
 
     def _agent_preview_mesh(self) -> Dict[str, Any]:
         request, message = self._mesh_preview_request()
@@ -7372,7 +7664,11 @@ class ERTProcessingModule(BaseModule):
         if len(self._tl_files) < 2:
             return {"status": "failed", "error": "Add at least two ordered ERT files first.",
                     "files": len(self._tl_files)}
+        worker = getattr(self, "_tl_worker", None)
+        last = self._turn_log[-1] if self._turn_log else None
         self._run_timelapse()
+        if getattr(self, "_tl_worker", None) is worker:     # the page declined it
+            return {"status": "failed", "error": self._declined_since(last)}
         return {"status": "started", "message": "Time-lapse inversion started. Ask for status shortly.",
                 "steps": len(self._tl_files)}
 
@@ -7389,7 +7685,7 @@ class ERTProcessingModule(BaseModule):
                 "vtk_steps": len((self._tl_result or {}).get("vtk_step_paths") or [])}
 
 
-# Names a 0.3.0 script could import from this page, which it no longer defines.
+# Redirects names that 0.3.0 scripts imported from this page to where they live.
 from PyHydroGeophysX._internal.deprecations import legacy_names as _legacy_names  # noqa: E402
 
 __getattr__ = _legacy_names(__name__, {

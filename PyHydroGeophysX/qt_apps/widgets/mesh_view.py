@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QSpinBox,
     QSplitter,
+    QStackedWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -267,7 +268,7 @@ class MeshResultView(QWidget):
 
         # The colour map, one per quantity - resistivity, change, velocity,
         # coverage - each shared with every other view of it, and each opening
-        # on the map this view always drew it with. The row above is already as
+        # on the map this view draws it with by default. The row above is as
         # wide as the panel can afford, so the choice has a row of its own,
         # under the colour limits it belongs with.
         self._colormap = cmaps.ColormapChooser(
@@ -285,12 +286,25 @@ class MeshResultView(QWidget):
         self._cov_note = QLabel("")
         self._cov_note.setWordWrap(True)
 
-        layout = QVBoxLayout(self)
+        # A model on a 3-D mesh is drawn in an interactive volume view instead
+        # of the section, made the first time one arrives (_draw_volume).
+        self._body = QWidget()
+        layout = QVBoxLayout(self._body)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addLayout(bar)
         layout.addLayout(colour_row)
         layout.addWidget(self._canvas, stretch=1)
         layout.addWidget(self._cov_note)
+        self._stack = QStackedWidget()
+        self._stack.addWidget(self._body)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.addWidget(self._stack)
+        self._shared_colormaps = colormaps
+        self._volume = None
+        self._volume_page = None      # the volume view and, beside it, the side panels
+        self._side_widgets: list = []
+        self._volume_version = None   # the result and limits the volume view was given
         self._side = None          # splitter holding the canvas and a side panel
         # View > Length Units: the axes change, the model on the mesh does not.
         length_units.notifier().changed.connect(self._on_length_unit_changed)
@@ -306,7 +320,7 @@ class MeshResultView(QWidget):
         narrower or closed.
         """
         if self._side is None:
-            layout = self.layout()
+            layout = self._body.layout()
             index = layout.indexOf(self._canvas)
             layout.removeWidget(self._canvas)
             self._side = QSplitter(Qt.Horizontal)
@@ -316,6 +330,17 @@ class MeshResultView(QWidget):
         self._side.addWidget(widget)
         self._side.setStretchFactor(0, 1)
         self._side.setStretchFactor(self._side.count() - 1, 0)
+        self._side_widgets.append(widget)
+
+    def _place_side_panels(self, beside_volume: bool) -> None:
+        """Move the side panels beside whichever view is on screen."""
+        target = self._volume_page if beside_volume else self._side
+        if target is None:
+            return
+        for widget in self._side_widgets:
+            if widget.parentWidget() is not target:
+                target.addWidget(widget)
+                target.setStretchFactor(target.indexOf(widget), 0)
 
     def show_model(self, mgr, kind: str = "ert", title: str = "") -> None:
         """Display the inverted model from a pyGIMLi manager (``ert`` or ``srt``)."""
@@ -400,6 +425,63 @@ class MeshResultView(QWidget):
             self._new_result()
         self._sync_controls()
         self._redraw()
+
+    def _draw_volume(self, mesh, values, coverage) -> bool:
+        """Show a model on a 3-D mesh in the volume view; False without one.
+
+        The view takes the colours and the clip plane itself, so a result is
+        handed over once; the section controls have nothing to act on.
+        """
+        import numpy as np
+
+        if self._volume is None:
+            from PyHydroGeophysX.qt_apps.widgets.model3d_view import VTKVolumeView
+
+            self._volume = VTKVolumeView(colormaps=self._shared_colormaps,
+                                         colormap_key=cmaps.RESISTIVITY)
+            self._volume_page = QSplitter(Qt.Horizontal)
+            self._volume_page.addWidget(self._volume)
+            self._volume_page.setCollapsible(0, False)
+            self._volume_page.setStretchFactor(0, 1)
+            self._stack.addWidget(self._volume_page)
+        if not self._volume.interactive_available:
+            return False
+        # The colour limits the section would take: locked ones (a series on
+        # one scale), or a change centred on zero.
+        limits = None
+        if self._lock_range.isChecked():
+            limits = (float(self._cmin.value()), float(self._cmax.value()))
+        elif self._kind == "change":
+            span = self._symmetric_span(values)
+            limits = (-span, span) if span else None
+        key = (self._version, limits)
+        if self._volume_version != key:
+            from PyHydroGeophysX.visualization.pyvista_compat import pygimli_to_pyvista
+
+            try:
+                grid = pygimli_to_pyvista(mesh)
+            except Exception:  # noqa: BLE001 - the section view says what it can
+                return False
+            grid.cell_data.remove("Marker")
+            # VTK's own font has no Ω.
+            name = {"srt": "Velocity (m/s)", "change": "Change from baseline (%)"}.get(
+                self._kind, "Resistivity (ohm·m)")
+            grid.cell_data[name] = np.asarray(values, dtype=float)
+            if coverage is not None and np.asarray(coverage).size == grid.n_cells:
+                grid.cell_data["Coverage (log10)"] = np.asarray(coverage, dtype=float)
+            default = ("RdBu_r" if self._kind == "change" else "turbo" if self._kind == "srt"
+                       else ert_model_plot_kwargs()["cMap"])
+            metadata = {"log": self._kind == "ert"}
+            if limits is not None:
+                metadata["limits"] = limits
+            self._volume.show_dataset(
+                grid, name=self._title or "3-D model", scalar_candidates=(name,),
+                cmap=default, opacity=1.0, scalar_cmaps={name: default},
+                field_metadata={name: metadata})
+            self._volume_version = key
+        self._place_side_panels(True)
+        self._stack.setCurrentWidget(self._volume_page)
+        return True
 
     def _new_result(self) -> None:
         """Forget everything derived from the previous result."""
@@ -507,9 +589,9 @@ class MeshResultView(QWidget):
         the colour limits, a caller setting several of them in a row - and the
         requests of one turn of the event loop become one drawing. ``draw_idle``
         merges only the final paint: the subdivision, the coverage statistics
-        and pyGIMLi rebuilding every cell all ran once per request before it,
-        so locking the colour range drew the section twice and a step of a
-        series three times.
+        and pyGIMLi rebuilding every cell would otherwise run once per request,
+        so a change that sets several options in a row would draw the section
+        several times.
         """
         self._pending_draw.request()
 
@@ -526,6 +608,20 @@ class MeshResultView(QWidget):
         mesh, values, coverage, scalar_cov = self._cached("source", self._resolve_source)
         if mesh is None or values is None:
             return
+        if int(mesh.dim()) == 3:
+            if not self._draw_volume(mesh, values, scalar_cov):
+                # No volume view here: say so on the canvas, which cannot draw it.
+                self._place_side_panels(False)
+                self._stack.setCurrentWidget(self._body)
+                self._fig.clear()
+                self._fig.text(0.5, 0.5, f"{self._title or 'A 3-D model'}: "
+                               f"{np.asarray(values).size} cells in 3-D; the interactive "
+                               "3D view (PyVista) is unavailable in this session.",
+                               ha="center", va="center", wrap=True)
+                self._canvas.draw_idle()
+            return
+        self._place_side_panels(False)
+        self._stack.setCurrentWidget(self._body)
 
         import pygimli as pg
 
@@ -603,7 +699,7 @@ class MeshResultView(QWidget):
         # Another step of a series on the same mesh - the time-lapse step
         # buttons - changes only the cells' values, their coverage fade and the
         # title, so those are put on the cells already drawn. Drawing the section
-        # from scratch cost two seconds a click on a 60 000-cell mesh.
+        # from scratch makes each click slow on a large mesh.
         if (drawn is not None and drawn.get("frame") == frame and drawn.get("mesh") is mesh
                 and (locked or not drawn["locked"])
                 and self._revalue(values, coverage, show_kw, drawn)):
@@ -614,8 +710,8 @@ class MeshResultView(QWidget):
         self._fig.clear()
         # The subplot parameters and the layout engine both outlive clear(), and
         # pyGIMLi's tight_layout moves the first and swaps the second: each
-        # drawing then started from where the last one's layout ended, and the
-        # section shifted and changed size from one redraw to the next. Start
+        # drawing would otherwise start from where the last one's layout ended,
+        # and the section would shift and change size between redraws. Start
         # every drawing from the same place - with no layout engine, since
         # pyGIMLi calls tight_layout itself and matplotlib warns every time that
         # is done to a constrained figure. The layout is put back once the
@@ -717,8 +813,7 @@ class MeshResultView(QWidget):
             show_kw = ert_model_plot_kwargs(show_mesh=show_mesh)
             show_kw.update(colorBar=False)
         # The map chosen for this quantity, or the one above when none has been:
-        # a name PyGIMLi and matplotlib both take, so the default draws exactly
-        # as it always did.
+        # a name PyGIMLi and matplotlib both take.
         key = (cmaps.COVERAGE if show_coverage
                else cmaps.VELOCITY if self._kind == "srt"
                else cmaps.RESISTIVITY_CHANGE if self._kind == "change"

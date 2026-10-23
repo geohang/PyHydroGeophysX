@@ -1,10 +1,10 @@
 """Naming things the user keeps: a Project when it is made, runs when they are saved.
 
-Results used to go to a fallback folder nobody chose, and every run was listed
-as ``Run`` plus four random characters, so after a few surveys nobody could
-tell which run belonged to which. These dialogs are where a name is asked for:
-a Project's name and place when one is created, or before data first goes into
-the fallback folder, and the runs' names when they are saved to the Project.
+A fallback folder nobody chose, and runs listed as ``Run`` plus random
+characters, leave nobody able to tell after a few surveys which run belongs to
+which. These dialogs are where a name is asked for: a Project's name and place
+when one is created, or before data first goes into the fallback folder, and
+the runs' names when they are saved to the Project.
 """
 
 from __future__ import annotations

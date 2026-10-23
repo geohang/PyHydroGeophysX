@@ -248,13 +248,12 @@ class GravMagProcessingModule(BaseModule):
             "Depth weighting exponent applied to the model term as "
             "sqrt(diag(JᵀWᵀWJ)) raised to this power. Without it the recovered body "
             "plasters against the top of the mesh, because shallow cells buy misfit "
-            "reduction most cheaply: on a block buried 60-160 m the peak moved from "
-            "12 m to 88 m. 0 turns the weighting off.")
+            "reduction most cheaply. 0 turns the weighting off.")
         self._station_z = self._dspin(1.0, -10000.0, 100000.0, 1.0, 1)
         self._station_z.setToolTip("Used only when the loaded table has no fourth z_m column.")
         self._rel_error = self._dspin(0.03, 0.0, 1.0, 0.01, 3)
         self._noise_floor = self._dspin(0.5, 0.0, 1e6, 0.1, 3)
-        # "all" by default: a default of 600 inverted 600 of a 3,451-station
+        # "all" by default: a default cap would invert only part of a large
         # survey with only a log line saying so. A number is for a quick test,
         # and the Run group says how many stations it leaves out.
         self._max_stations = self._ispin(0, 0, 1_000_000)
@@ -587,8 +586,7 @@ class GravMagProcessingModule(BaseModule):
         xx, yy, zz = grid["xx"], grid["yy"], grid["zz"]
         image = np.asarray(zz, dtype=float).T
         finite = image[np.isfinite(image)]
-        # The grid's own extremes (what the map scaled to before it had typed
-        # limits), unless the limits are locked.
+        # The grid's own extremes, unless typed limits are locked.
         auto = (float(finite.min()), float(finite.max())) if finite.size else (0.0, 1.0)
         if not auto[1] > auto[0]:
             auto = (auto[0] - 0.5, auto[0] + 0.5)
@@ -692,8 +690,8 @@ class GravMagProcessingModule(BaseModule):
         vals = self._fields.get("Observed")
         if vals is None or self._x is None:
             return
-        # A station without a value has no colour to give; it was drawn in
-        # whatever colour NaN cast to, as if it had been measured.
+        # A station without a value has no colour to give; drawing it would
+        # colour it by whatever NaN casts to, as if it had been measured.
         shown = np.flatnonzero(np.isfinite(vals) & np.isfinite(self._x) & np.isfinite(self._y))
         if not shown.size:
             self._scatter.setData([])
@@ -1029,8 +1027,8 @@ class GravMagProcessingModule(BaseModule):
     def _on_inversion_failed(self, message: str, missing_backend: bool = False) -> None:
         self.fail_persisted_run(message, "gravmag.invert")
         # Told by the exception the run ended on, not by words in its message:
-        # a SimPEG error about a shape or a solve names SimPEG too, and was
-        # reported as SimPEG not being installed.
+        # a SimPEG error about a shape or a solve names SimPEG too, and would
+        # be reported as SimPEG not being installed.
         if missing_backend:
             self.log(f"SimPEG 3D inversion needs SimPEG + pymatsolver: {message}", "warn")
         else:
@@ -1253,7 +1251,7 @@ class GravMagProcessingModule(BaseModule):
         dlg.exec()
 
 
-# Names a 0.3.0 script could import from this page, which it no longer defines.
+# Redirects names that 0.3.0 scripts imported from this page to where they live.
 from PyHydroGeophysX._internal.deprecations import legacy_names as _legacy_names  # noqa: E402
 
 __getattr__ = _legacy_names(__name__, {

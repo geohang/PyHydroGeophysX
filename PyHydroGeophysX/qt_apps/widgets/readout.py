@@ -3,9 +3,8 @@
 A ``QLabel`` re-lays out its window whenever its text changes. ``setText``
 calls ``updateGeometry``, and every layout that activates passes that on to its
 parent, up to the window, unless a widget on the way has a fixed size. Under the
-mouse that happens on every move: 11 ms a move over the ERT page's Mesh tab and
-20 ms over the Hydro -> Geophysics profile, with eight to ten layout passes
-each, which is what made moving the mouse over a plot feel sluggish.
+mouse that happens on every move, with several layout passes each, which makes
+moving the mouse over a plot feel sluggish.
 
 :class:`ReadoutLabel` paints its text itself and never changes its size hint,
 so a new reading only repaints it. :func:`navigation_toolbar` gives a matplotlib

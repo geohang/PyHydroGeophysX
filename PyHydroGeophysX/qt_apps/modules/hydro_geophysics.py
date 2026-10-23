@@ -111,7 +111,7 @@ _LAYERED_VARS = {"Water content", "Porosity", "Layer bottom"}
 #: What the section can show.
 _SECTION_VARS = ["Water content", "Porosity", "Saturation"]
 #: The steps the assistant names. Each opens the view and the panel the step is
-#: done in (see _go_to); the page itself no longer pages through them.
+#: done in (see _go_to); the page itself does not page through them.
 _STEPS = ["Data", "Profile", "Methods", "Parameters", "Run", "Results"]
 _MAP_TAB, _SECTION_TAB, _RESULTS_TAB = range(3)
 #: The ERT arrays offered: what the menu says, and the pyGIMLi scheme it makes.
@@ -169,7 +169,7 @@ class HydroGeophysicsModule(BaseModule):
         self._run_busy: Optional[BusyStateController] = None
         self._workflow_recipe_path = ""
         #: Why the last run did not finish - its error, or that it was
-        #: stopped - for the assistant, whose status otherwise still showed
+        #: stopped - for the assistant, whose status would otherwise still show
         #: the result before it; "" while a run is under way or succeeded.
         self._run_problem = ""
         self._preview_worker: Optional[TaskWorker] = None
@@ -1379,8 +1379,8 @@ class HydroGeophysicsModule(BaseModule):
             str(method): {str(panel): str(path) for panel, path in panels.items()}
             for method, panels in paths.items() if isinstance(panels, dict)
         }
-        # Backward-compatible fallback for old results written before separate
-        # model/measurement figures were available.
+        # Fallback for results that carry one figure list instead of separate
+        # model and measurement figures.
         legacy = [str(path) for path in result.get("figure_paths", []) if Path(path).exists()]
         if not self._result_paths and legacy:
             self._result_paths = {
@@ -1658,7 +1658,7 @@ class HydroGeophysicsModule(BaseModule):
             # The run itself failed - out of memory, arrays of the wrong shape -
             # and its own reason is what helps, beside the settings that can be
             # changed before trying again. Exporting the configuration in its
-            # place blamed a backend that was there.
+            # place would blame a backend that is there.
             self.log(f"Forward modeling failed: {message}", "error")
             self._run_status.setText(f"The simulation failed: {message}")
             theme.set_tone(self._run_status, "error")

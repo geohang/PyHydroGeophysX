@@ -86,7 +86,7 @@ from PyHydroGeophysX.workflows import (
 )
 
 #: The steps the assistant names. Each opens the view and the panel the step is
-#: done in (see _go_to); the page itself no longer pages through them.
+#: done in (see _go_to); the page itself does not page through them.
 _STEPS = ["Lines", "Structure", "Grid", "Build", "Results"]
 _MAP_TAB, _SECTION_TAB, _MODEL_TAB, _FIGURES_TAB = range(4)
 #: The lines table: name, then the two endpoints in map coordinates.
@@ -245,7 +245,7 @@ class Seismic3DModule(BaseModule):
         self._run_busy: Optional[BusyStateController] = None
         self._workflow_recipe_path = ""
         #: Why the last run did not finish - its error, or that it was
-        #: stopped - for the assistant, whose status otherwise still showed
+        #: stopped - for the assistant, whose status would otherwise still show
         #: the result before it; "" while a run is under way or succeeded.
         self._run_problem = ""
         self._has_results = False
@@ -1040,7 +1040,7 @@ class Seismic3DModule(BaseModule):
             # The build itself failed - out of memory, a grid too fine, a bad
             # line file - and its own reason is what helps, beside the settings
             # that can be changed before building again. Exporting the
-            # configuration in its place blamed a backend that was there.
+            # configuration in its place would blame a backend that is there.
             self.log(f"3D model build failed: {message}", "error")
             self._run_status.setText(f"The build failed: {message}")
             theme.set_tone(self._run_status, "error")

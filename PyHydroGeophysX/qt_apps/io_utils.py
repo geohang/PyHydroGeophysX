@@ -2,10 +2,9 @@
 
 The generic numeric-table loaders live in
 :mod:`PyHydroGeophysX.data_processing.table_io` and are re-exported here so
-existing desktop imports keep
-working. Only the JSON helpers used by the Streamlit <-> Qt bridge remain
-local: ``write_json`` is atomic (temp file + ``os.replace``) so the bridge
-poller never sees a half-written document. The pages' "Use example" buttons
+existing desktop imports keep working, as are the JSON helpers used by the
+Streamlit <-> Qt bridge: ``write_json`` is atomic (temp file + ``os.replace``)
+so the bridge poller never sees a half-written document. The pages' "Use example" buttons
 find the source repository's example data through :func:`find_example`, and
 say what is missing with :func:`missing_example_message`.
 """

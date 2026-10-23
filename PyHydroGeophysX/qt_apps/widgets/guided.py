@@ -55,8 +55,8 @@ def hint(text: str = "") -> QLabel:
 def fold(title: str = "More options") -> Tuple[QWidget, QFormLayout]:
     """Settings folded under a "▸ title" line, as the Home page's Session details.
 
-    Returns the widget to place and the form to fill. A checkable group box was
-    used first; folded, it still drew an empty card under its title, which read
+    Returns the widget to place and the form to fill. A checkable group box is
+    not used: folded, it still draws an empty card under its title, which reads
     as a box to type in.
     """
     holder = QWidget()
@@ -119,12 +119,12 @@ def start_card(title: str, intro: str, steps: Sequence[str],
     page = QWidget()
     outer = QVBoxLayout(page)
     outer.addStretch(1)
-    # A group box is the studio's card; the Home page's card was tried and its
-    # rule making every child transparent emptied the blue button.
+    # A group box is the studio's card; the Home page's card has a rule that
+    # makes every child transparent, which would empty the blue button.
     card = QGroupBox()
     # A fixed width, so each wrapped line can be given the height it needs at
-    # that width (below); sized from its hint, a wrapped QLabel came out a line
-    # short and squashed the buttons under it.
+    # that width (below); sized from its hint, a wrapped QLabel comes out a line
+    # short and squashes the buttons under it.
     width, margin = 600, 18
     card.setFixedWidth(width)
     layout = QVBoxLayout(card)

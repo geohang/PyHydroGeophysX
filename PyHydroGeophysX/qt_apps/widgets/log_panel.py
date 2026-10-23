@@ -32,7 +32,7 @@ class LogPanel(QTextEdit):
         self.setReadOnly(True)
         self.setMinimumHeight(110)
         self.document().setMaximumBlockCount(2000)  # cap memory
-        # The display keeps the same tail as before; complete run logs are
+        # The display keeps a 2000-line tail; complete run logs are
         # persisted independently. Bound queued text as well as the document.
         self._pending = deque(maxlen=2000)
         self._flush_timer = QTimer(self)

@@ -497,10 +497,9 @@ class EMProcessingModule(BaseModule):
         self._keep_negative.setChecked(True)
         self._keep_negative.setToolTip(
             "On (the default): a negative gate is judged on its stack error "
-            "alone. This is what the TEMcompany inversion does. Measured over "
-            "1,503 station-moment datasets of one project, its gate selection "
-            "is exactly the stored in-use flags, and it keeps a non-positive "
-            "gate in 87 low-moment and 251 high-moment datasets.\n\n"
+            "alone. This is what the TEMcompany inversion does: its gate "
+            "selection is exactly the stored in-use flags, and it keeps "
+            "non-positive gates.\n\n"
             "Off: a negative gate is condemned by its sign.\n\n"
             "An offset-loop system genuinely reverses sign at early time, while "
             "the diffusing current system is still inside the transmitter-receiver "
@@ -530,8 +529,8 @@ class EMProcessingModule(BaseModule):
             "Against that, the deep moment is the only thing that sees deep, so a "
             "station stripped of its HM keeps its shallow model and loses its "
             "depth. Which argument wins depends on the survey, so this is off by "
-            "default. On one 929-station survey a floor of 3 removed HM from 91 "
-            "stations, 163 gates, and left 7 with no data at all.")
+            "default. A station that has no LM gates either is left with no data "
+            "at all.")
         self._min_hm_gates.valueChanged.connect(self._on_use_flags_changed)
         moment_form.addRow("Min HM gates", self._min_hm_gates)
         self._tem_moment_row.setVisible(False)
@@ -621,10 +620,10 @@ class EMProcessingModule(BaseModule):
             "Distance from the transmitter loop to the receiver coil.\n\n"
             "A walking ground survey records its own for every station, and "
             "those are used in preference to this while the box below is "
-            "ticked. One line of 882 stations held 322 distinct values between "
-            "11.58 and 17.63 m against a nominal 15, so a single number here "
-            "cannot describe the survey; it is the value for a format that "
-            "records none, and the override when the box is cleared.")
+            "ticked. The separation varies from station to station around its "
+            "nominal value, so a single number here cannot describe the survey; "
+            "it is the value for a format that records none, and the override "
+            "when the box is cleared.")
         # The loop and the coil have their own heights and the forward reads
         # them separately, so one field for both could only set them equal.
         self._tx_height = self._dspin(f["height"], 0.0, 500.0, 0.05, 2)
@@ -632,8 +631,8 @@ class EMProcessingModule(BaseModule):
         for widget, which in ((self._tx_height, "transmitter loop"),
                               (self._rx_height, "receiver coil")):
             widget.setToolTip(
-                f"Height of the {which} above the ground. Every TEMcompany "
-                "project seen so far records the two equal, but the forward "
+                f"Height of the {which} above the ground. TEMcompany "
+                "projects normally record the two equal, but the forward "
                 "places them separately, so a frame that does not can say so.")
         self._height_row = merged_row(self._tx_height, "Rx", self._rx_height)
         self._per_station_geometry = QCheckBox(
@@ -652,8 +651,8 @@ class EMProcessingModule(BaseModule):
             "well inside what the response can resolve.")
         self._orient = QComboBox(); self._orient.addItems(["z", "x", "y"])
         # No "both": this page inverts, and a sounding carries one field per
-        # frequency. Offered, it fitted secondary and total values alternately
-        # against successive frequencies; the inversion now refuses it.
+        # frequency. Fitting secondary and total values alternately against
+        # successive frequencies is meaningless, so the inversion refuses it.
         self._component = QComboBox(); self._component.addItems(["secondary", "total"])
         self._component.setToolTip(
             "Which field the sounding's values are: the secondary field alone, or the "
@@ -707,7 +706,7 @@ class EMProcessingModule(BaseModule):
         self._min_thick = self._dspin(d["min_thickness"], 0.2, 50.0, 0.5, 2)
         # Two decimals, like the minimum: a project's saved layer grid is only
         # reused when both ends still match it (see _collect_inv), and rounding
-        # the deepest layer to 0.1 m was enough to lose that match.
+        # the deepest layer to 0.1 m would be enough to lose that match.
         self._max_thick = self._dspin(d["max_thickness"], 1.0, 500.0, 1.0, 2)
         # Two ends of one setting: the layer grid is geometric between them.
         self._thick_row = merged_row(self._min_thick, "to", self._max_thick, "m")
@@ -917,8 +916,8 @@ class EMProcessingModule(BaseModule):
         The table is a whole-file pass, so it is only worth doing for a project
         that has one; a single-sounding text file has nothing to summarise.
         It describes the survey, not the station on screen, so a station click
-        under the same load settings keeps it: redrawing it cost 0.3 s of each
-        click on a 564-station TEM2Go project.
+        under the same load settings keeps it: redrawing it would add to the
+        time of each click on a large project.
         """
         self._metadata_view.set_metadata(self._data)
         key = self._loaded_key
@@ -1008,9 +1007,9 @@ class EMProcessingModule(BaseModule):
             "on the loader panel instead.")
         self._err_bounds_row = merged_row(
             self._err_floor, "to", self._err_ceiling)
-        # Recovered resistivity is bounded too. The old fixed pair was 1 to 1e5,
-        # which on sparse ground TDEM lets a deep layer with no sensitivity rail
-        # into tens of thousands of ohm-m and dominate the colour scale.
+        # Recovered resistivity is bounded too, by bounds the user can set. On
+        # sparse ground TDEM a deep layer with no sensitivity rails to the upper
+        # bound, into tens of thousands of ohm-m, and dominates the colour scale.
         self._rho_min = self._dspin(1.0, 1e-3, 1e4, 1.0, 3)
         self._rho_min.setToolTip(
             "Lower bound on recovered resistivity, in Ω·m. The solver works in "
@@ -1038,11 +1037,11 @@ class EMProcessingModule(BaseModule):
         self._line_spacing = self._dspin(50.0, 0.1, 100000.0, 10.0, 2)
         self._line_spacing.setToolTip("Uniform sounding spacing used for the section's x-axis "
                                       "when no geometry file is loaded.")
-        # "all" by default. A default of 12 inverted 12 of a generic table's
-        # soundings with only a log line saying so; a cap is now something set
-        # on purpose, for a quick test, and the Run group says what it leaves
-        # out. The ceiling is far above any survey, because a QSpinBox clamps
-        # silently: told to hold 887 with a maximum of 500 it reads 500.
+        # "all" by default. A default cap would drop soundings with only a log
+        # line saying so; a cap is something set on purpose, for a quick test,
+        # and the Run group says what it leaves out. The ceiling is far above
+        # any survey, because a QSpinBox clamps silently: a value above its
+        # maximum reads as the maximum.
         self._line_max = self._ispin(0, 0, 1_000_000)
         self._line_max.setSpecialValueText("all")
         self._line_max.setToolTip(
@@ -1108,11 +1107,10 @@ class EMProcessingModule(BaseModule):
         self._trf_ftol = self._dspin(
             float(d.get("lci_ftol", 1e-4)), 1e-8, 1e-2, 1e-4, 8)
         self._trf_ftol.setToolTip(
-            "TRF relative full-objective stopping tolerance. The 1e-4 default "
-            "completed the full trailcreek robust run; 1e-6 exhausted 90 "
-            "evaluations before robust reweighting. The Ground TEM preset uses "
-            "1e-3: 22-40 % faster on four TEM2Go surveys, chi-squared within "
-            "2 %, and as close to TEMcompany's own inversion as 1e-4.")
+            "TRF relative full-objective stopping tolerance. A tolerance far "
+            "below the 1e-4 default can use up the evaluation budget before "
+            "robust reweighting. The Ground TEM preset uses the looser 1e-3, "
+            "which runs faster with nearly the same chi-squared.")
         import os as _os
 
         cores = getattr(_os, "process_cpu_count", None)
@@ -1189,7 +1187,7 @@ class EMProcessingModule(BaseModule):
 
         self._robust = QCheckBox("Robust errors (keep all gates)")
         self._robust.setToolTip(
-            "Keep every imported gate. After an initial fit, Huber-style weights "
+            "Keep every imported gate. After an initial fit, Huber weights "
             "increase the effective error of large residuals without changing the "
             "recorded measurement error. A gate can regain weight on later passes. "
             "A large residual can also mean an inadequate model, not bad data. "
@@ -1266,14 +1264,14 @@ class EMProcessingModule(BaseModule):
             "Raw project-response units, BEFORE inversion data_scale. 0 computes the "
             "LM response of a fixed 1000 Ω·m homogeneous reference half-space, "
             "using each station's actual waveform, filters, gate and geometry. A positive "
-            "value overrides that limit; e.g. 3e-9 for trailcreek's ~8.95 µs raw LM gate. "
+            "value overrides that limit; e.g. 3e-9 for a raw LM gate near 8.95 µs. "
             "The fixed trigger reference is deliberately separate from the soft model "
             "target. 80% of a full rolling window must lie below the limit; missing "
             "gates do not count.")
         prior_form.addRow("Prior trigger", self._prior_mode)
         prior_form.addRow("LM signal threshold", self._prior_signal_limit)
-        # Retained as hidden compatibility carriers for old saved configurations.
-        # Depth is no longer used; zero explicit rho selects the factor below.
+        # Hidden carriers that keep old saved configurations loadable.
+        # Depth is unused; zero explicit rho selects the factor below.
         self._prior_depth = self._dspin(0., 0., 100., 1., 1)
         self._prior_rho = self._dspin(0., 0., 1e6, 100., 1)
         self._prior_factor = self._dspin(2., 1., 20., .25, 2)
@@ -1599,10 +1597,10 @@ class EMProcessingModule(BaseModule):
             "shallow_prior_weight": float(self._prior_weight.value()),
             "shallow_prior_window": int(self._prior_window.value()),
             "shallow_prior_snr_ratio": float(self._prior_ratio.value()),
-            # Robust errors replaced deleting gates, so the panel no longer
-            # offers the old path and states that it is off. Saying so beats
-            # leaving the key out: a configuration loaded from elsewhere would
-            # otherwise decide it, and nothing on screen would show that it had.
+            # Robust errors take the place of deleting gates, so the panel
+            # offers no gate rejection and states that it is off. Saying so
+            # beats leaving the key out: a configuration loaded from elsewhere
+            # would otherwise decide it, and nothing on screen would show that.
             "reject_outliers": False,
             # 0 lets the solver size its own thread pool from the machine.
             "parallel_workers": int(self._parallel_workers_spin.value()),
@@ -1652,7 +1650,7 @@ class EMProcessingModule(BaseModule):
         reprocessing of the same survey is written under its own name, so
         ``project2.tiw`` can sit beside ``project.tiw`` describing the same day
         at a different stacking. The reader picks the standard name when nobody
-        asks, which made every other file in the folder unreachable from here.
+        asks, so any other file in the folder would be unreachable from here.
 
         Returns the folder itself when there is nothing to choose between, so
         the reader keeps its own rule, and ``None`` when the operator cancels.
@@ -1856,12 +1854,11 @@ class EMProcessingModule(BaseModule):
     def _ensure_survey(self, key: Any, options: Dict[str, Any], count: int) -> None:
         """Read every sounding once, on a worker thread, under these settings.
 
-        A multi-sounding file was walked whole on the window's thread for every
+        Walking a multi-sounding file whole on the window's thread for every
         station clicked - once to publish the survey for the joint page, again
-        when the run stored its input - and a generic table was re-parsed once
-        per sounding on each walk: 38 s per click at 3000 soundings. Now one
-        read per file and load setting, off the UI thread and named in the
-        status bar while it runs.
+        when the run stores its input - would re-parse a generic table once
+        per sounding on each walk. Instead there is one read per file and load
+        setting, off the UI thread and named in the status bar while it runs.
         """
         if self._survey_soundings(key) is not None:
             return
@@ -1889,7 +1886,7 @@ class EMProcessingModule(BaseModule):
         self._survey_job = None
         self._survey = (key, list(soundings))
         if key == getattr(self, "_loaded_key", None):
-            # The joint page and the map now get the whole survey, read under
+            # The joint page and the map get the whole survey, read under
             # the same gate selection the page shows.
             self._register_observed_resource()
 
@@ -2163,9 +2160,8 @@ class EMProcessingModule(BaseModule):
                 inversion.get("layer_thicknesses", []), dtype=float).ravel()
         n = int(self._data.get("n_soundings", 1))
         # Max soundings stays as the user left it ("all" unless a quick test
-        # asked for fewer); the Run group says what a cap leaves out. It used
-        # to be reset to the station count here, and to 200 for raw tTEM, which
-        # inverted 200 of a longer tTEM survey with nothing on screen saying so.
+        # asked for fewer); the Run group says what a cap leaves out. Resetting
+        # it here would silently invert only part of a longer survey.
         self._populate_line_pick()
         self._update_run_scope()
         span = (float(self._geom_positions[-1] - self._geom_positions[0])
@@ -2502,12 +2498,11 @@ class EMProcessingModule(BaseModule):
     def _persist_source(self, inputs_dir: Path, method: str) -> Path:
         """Store the imported soundings so a recorded EM run is self-contained.
 
-        This used to copy whatever the user selected, which made every inversion
-        cost another copy of the acquisition: a TEMcompany project folder is
-        hundreds of megabytes, and a Project opened on the survey folder itself
-        made ``copytree`` walk into the duplicate it was still writing. The
-        soundings are the only part the inversion reads and they compress to a
-        fraction of that, so the run keeps those instead.
+        The run keeps the soundings, not whatever the user selected: a
+        TEMcompany project folder is hundreds of megabytes, and a Project opened
+        on the survey folder itself would make ``copytree`` walk into the
+        duplicate it is still writing. The soundings are the only part the
+        inversion reads and they compress to a fraction of that.
         """
         if self._source_path is None:
             raise FileNotFoundError("No persisted EM source is available.")
@@ -2633,9 +2628,10 @@ class EMProcessingModule(BaseModule):
         """Give a section without map coordinates those of its geometry file.
 
         The label reads "+ map x,y" once a geometry file with easting and
-        northing is loaded, but the section came back with NaN there, so Add to
-        Map could offer only a straight line and the coordinates had to be typed
-        in again. A survey that embeds its own coordinates keeps them.
+        northing is loaded; without those coordinates the section holds NaN
+        there, Add to Map can offer only a straight line, and the coordinates
+        would have to be typed in again. A survey that embeds its own
+        coordinates keeps them.
         """
         carried, self._line_xy = self._line_xy, None
         n = int(result.get("n_soundings") or 0)
@@ -2877,8 +2873,8 @@ class EMProcessingModule(BaseModule):
     def _on_line_failed(self, message: str, missing_backend: bool = False) -> None:
         self.fail_persisted_run(message, "em.line_inversion")
         # Told by the exception the run ended on, not by words in its message:
-        # a SimPEG error about a shape or a solve names SimPEG too, and was
-        # reported as SimPEG not being installed.
+        # a SimPEG error about a shape or a solve names SimPEG too, and would
+        # be reported as SimPEG not being installed.
         if missing_backend:
             self.log(f"Line inversion needs SimPEG: {message}", "warn")
         else:
@@ -3407,7 +3403,7 @@ class EMProcessingModule(BaseModule):
                 "has_xy": bool(g.get("has_xy"))}
 
 
-# Names a 0.3.0 script could import from this page, which it no longer defines.
+# Redirects names that 0.3.0 scripts imported from this page to where they live.
 from PyHydroGeophysX._internal.deprecations import legacy_names as _legacy_names  # noqa: E402
 
 __getattr__ = _legacy_names(__name__, {

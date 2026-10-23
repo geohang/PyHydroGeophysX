@@ -1,15 +1,17 @@
 """Mesh 3D module: an interactive 3D mesh builder.
 
 Build sensor arrays (surface grid, single borehole, crosshole, surface-to-
-borehole) for electrodes, geophones or other sensors, choose topography
+borehole, or the positions a sensor file lists) for electrodes, geophones
+or other sensors, choose topography
 (including loading x, y, z points from a file), generate a PyGIMLi 3D mesh
 (surface-topography prism, Gmsh-free structured grid, Gmsh tetrahedra, or an
-E4D-style mesh built the way E4D builds one, from a layout or an E4D ``.cfg``;
+mesh from an E4D mesh configuration, written from a layout or read from a ``.cfg``;
 see ``core.e4d_mesh``), and view the sensors +
 the generated mesh in an interactive PyVistaQt 3D viewer. Zones - boxes of known
 or assumed resistivity (``widgets.zone_boxes``) - can shape the mesh on every
 engine and give the 3D forward model its structure. Mesh generation runs on
-a worker thread; the mesh can be exported to BMS / VTK / sensor CSV. The compute lives in
+a worker thread; the mesh can be exported to BMS / VTK / sensor CSV, and handed
+to the ERT page as the mesh its inversion runs on. The compute lives in
 ``qt_apps.mesh3d_builder`` (Qt-free); this module is the UI.
 
 The page is laid out the way the ERT page is: the view in the middle and the
@@ -87,9 +89,14 @@ _INSTALL_MESSAGE = (
     "Mesh generation and export still work without it."
 )
 _MESH_FILTER = "Mesh (*.vtk *.vtu *.vtp *.stl *.ply *.bms);;All files (*)"
-_ARRAY_TYPES = ["Surface grid", "Single borehole", "Crosshole", "Surface-to-borehole"]
+_SENSOR_FILTER = "Sensor positions (*.csv *.txt *.dat *.xyz *.elec);;All files (*)"
+_ARRAY_TYPES = ["Surface grid", "Single borehole", "Crosshole", "Surface-to-borehole",
+                mesh3d_builder.FILE_ARRAY]
 _MESH_TYPES = ["Surface with topography", "Box mesh"]
-_TOPO_TYPES = ["Flat", "Linear tilt", "Gaussian hill", "Custom expression", "From file (x, y, z)"]
+_TOPO_TYPES = ["Flat", "Linear tilt", "Gaussian hill", "Custom expression", "From file (x, y, z)",
+               mesh3d_builder.SENSOR_GROUND]
+#: The ERT page's key in the studio, which a mesh built here can be handed to.
+_ERT_PAGE = "ert"
 _MESH_ENGINES = ["Auto", "Gmsh (tetrahedral)", "PyGIMLi prism", "Structured grid",
                  mesh3d_builder.E4D_ENGINE]
 _E4D_CONFIG_FILTER = "E4D mesh configuration (*.cfg);;All files (*)"
@@ -103,8 +110,8 @@ _E4D_FROM_STEPS = "No configuration loaded: the layout is built from steps 1, 3 
 # The offscreen guard, shared with the model viewer; it applies the VTK shim
 # itself. Under the offscreen Qt platform (headless / CI / --self-test)
 # constructing the live QtInteractor aborts the process at the VTK level, so the
-# viewer is disabled there. Bound to the name this module always used, which
-# tests patch.
+# viewer is disabled there. Bound to ``_try_import_pyvista``, the name tests
+# patch.
 from PyHydroGeophysX.visualization.pyvista_compat import (  # noqa: E402
     try_import_pyvista as _try_import_pyvista,
 )
@@ -127,7 +134,11 @@ class Mesh3DModule(BaseModule):
         self._plotter = None
         self._sensors = None         # last previewed/generated sensor DataFrame
         self._mesh = None            # last generated pygimli mesh
+        self._mesh_file = ""         # where that mesh is saved, for the ERT page
         self._topo_points = None     # loaded (x, y, z) topography points
+        self._sensor_points = None   # sensor positions read from a file
+        self._sensor_file = ""
+        self._sensors_buried = False # some of them below others (boreholes)
         self._gen_worker: Optional[ProcessWorkflowWorker] = None
         self._gen_busy: Optional[BusyStateController] = None
         self._ert_fwd_worker: Optional[ProcessWorkflowWorker] = None
@@ -178,7 +189,7 @@ class Mesh3DModule(BaseModule):
         self._update_visibility()
 
     def showEvent(self, event) -> None:  # noqa: N802 - Qt override
-        """Render once the page is on screen, which the timer used to see to."""
+        """Render once the page is on screen."""
         super().showEvent(event)
         if self._plotter is not None:
             QTimer.singleShot(0, self._refresh_plotter)
@@ -226,7 +237,28 @@ class Mesh3DModule(BaseModule):
             btn.clicked.connect(slot)
             bar.addWidget(btn)
         bar.addStretch(1)
+        # As on the ERT page's Mesh tab: the outer region dwarfs the domain.
+        self._show_outer = QCheckBox("Outer region")
+        self._show_outer.setToolTip(
+            "Show the coarse outer region (marker 1) too. Off, the view keeps to the "
+            "cells an inversion solves for, around the sensors.")
+        self._show_outer.toggled.connect(self._redraw_mesh)
+        bar.addWidget(self._show_outer)
         return bar
+
+    def _redraw_mesh(self, *_args) -> None:
+        if self._mesh is not None:
+            self._render_mesh(self._mesh, self._sensors)
+
+    def _without_outer(self, pv_mesh, scalars):
+        """``pv_mesh`` without its outer region (marker 1), unless Outer region
+        is ticked or nothing else would be left."""
+        if not scalars or self._show_outer.isChecked():
+            return pv_mesh
+        markers = np.asarray(pv_mesh.cell_data[scalars])
+        if not ((markers > 1).any() and (markers <= 1).any()):
+            return pv_mesh
+        return pv_mesh.extract_cells(np.flatnonzero(markers > 1))
 
     def _build_colour_row(self) -> QHBoxLayout:
         """The colour map of whatever the viewer is colouring.
@@ -317,10 +349,22 @@ class Mesh3DModule(BaseModule):
         box = QGroupBox("1. Sensor array")
         self._array_group = box
         form = QFormLayout(box)
+        # The shortest way from a table of sensors to a mesh: read it and
+        # build with the settings of the steps below.
+        self._quick_btn = QPushButton("Build mesh from sensor file…")
+        self._quick_btn.setIcon(theme.icon("fa5s.file-import"))
+        self._quick_btn.setToolTip(
+            "Pick a CSV or text table of sensor positions (x, y, z in metres, such as "
+            "Cable,Elec,X,Y,Z) and generate the mesh under them straight away, with the "
+            "settings of the steps below. To change the settings first, choose "
+            f"{mesh3d_builder.FILE_ARRAY} as the array and load the file there.")
+        self._quick_btn.clicked.connect(self._mesh_from_sensor_file_dialog)
+        form.addRow(self._quick_btn)
         self._array_type = QComboBox(); self._array_type.addItems(_ARRAY_TYPES)
         self._array_type.setToolTip(
             "Where the electrodes, geophones or other sensors are: a grid on the surface, "
-            "one borehole, several boreholes, or a line on the surface beside a borehole.")
+            "one borehole, several boreholes, a line on the surface beside a borehole, or "
+            "the positions a file lists.")
         self._array_type.currentTextChanged.connect(self._update_visibility)
         form.addRow("Array", self._array_type)
 
@@ -378,12 +422,25 @@ class Mesh3DModule(BaseModule):
                 ("Borehole sensors", self._s2b_bhn),
                 ("Sensors from z", merged_row(self._s2b_zs, "to", self._s2b_ze))]
 
+        # From a file: the positions a table of sensors gives.
+        load_btn = QPushButton("Load sensor file…")
+        load_btn.setIcon(theme.icon("fa5s.file-upload"))
+        load_btn.setToolTip(
+            "A table of sensor positions, CSV or text: x, y and z in metres, such as "
+            "Cable,Elec,X,Y,Z. The header says which column is which; without one, a "
+            "sensor-number column is set aside. A table of x and z alone is a line "
+            "at y = 0.")
+        load_btn.clicked.connect(self._load_sensor_file_dialog)
+        self._sensor_file_label = QLabel("No file loaded.")
+        self._sensor_file_label.setWordWrap(True)
+        from_file = [(None, load_btn), (None, self._sensor_file_label)]
+
         for spin in (self._bh_z_start, self._cross_z_start, self._s2b_zs):
             spin.setToolTip("Elevation of the top sensor; the rest are spaced evenly down "
                             "to the bottom one.")
         self._array_rows: Dict[str, List[QWidget]] = {
             name: self._add_rows(form, rows)
-            for name, rows in zip(_ARRAY_TYPES, (grid, single, cross, line))}
+            for name, rows in zip(_ARRAY_TYPES, (grid, single, cross, line, from_file))}
         # Said here when a loaded E4D configuration sets the electrodes instead.
         self._array_note = self._note(tone="error")
         form.addRow(self._array_note)
@@ -405,8 +462,8 @@ class Mesh3DModule(BaseModule):
             "Gmsh (tetrahedral): high-quality refined tet mesh (flat top; best for box / borehole / mild terrain).\n"
             "PyGIMLi prism: topography-conforming.\n"
             "Structured grid: fast regular grid.\n"
-            "E4D (Triangle + TetGen): built the way E4D builds its meshes - a fine zone "
-            "around the electrodes inside a coarse outer zone reaching far out - and "
+            "E4D (Triangle + TetGen): a fine zone "
+            "around the electrodes inside a coarse outer zone reaching far out, "
             "written as an E4D .cfg that E4D itself runs on.")
         self._mesh_engine.currentTextChanged.connect(self._update_visibility)
         form.addRow("Engine", self._mesh_engine)
@@ -490,6 +547,12 @@ class Mesh3DModule(BaseModule):
         self._bound_ext.setToolTip(
             "How far the domain reaches beyond a surface grid, as a multiple of the grid's "
             "size: 1.4 adds a fifth of its length on each side.")
+        self._outer = self._dspin(0.0, 20.0, mesh3d_builder.OUTER_SPREADS, 1.0, 1, " spreads")
+        self._outer.setToolTip(
+            "A coarse region (marker 1, not inverted) reaching this many times the "
+            "domain's larger side beyond it, sideways and down, as on the ERT page's own "
+            "mesh: it carries the far boundary away from the sensors. 0 leaves it out; a "
+            "box mesh has none, its walls being the tank's.")
         self._box_length = self._dspin(1.0, 5000.0, 50.0, 1.0, 2, " m")
         self._box_width = self._dspin(1.0, 5000.0, 30.0, 1.0, 2, " m")
         self._box_height = self._dspin(1.0, 1000.0, 25.0, 1.0, 2, " m")
@@ -505,6 +568,7 @@ class Mesh3DModule(BaseModule):
         self._box_rows = [self._box_length, self._box_width, self._box_height]
         self._add_rows(form, [
             ("Investigation depth", self._para_depth), ("Boundary extension", self._bound_ext),
+            ("Outer region", self._outer),
             ("Length (x)", self._box_length), ("Width (y)", self._box_width),
             ("Depth (z)", self._box_height),
             ("Lateral padding", self._bh_lat_pad), ("Top padding", self._bh_top_pad),
@@ -564,10 +628,65 @@ class Mesh3DModule(BaseModule):
         self._topo_file_label = QLabel("No file loaded. The surface is interpolated from the points.")
         self._topo_file_label.setWordWrap(True)
         points = [(None, load_btn), (None, self._topo_file_label)]
+        # A surface array read from a file: the ground through its sensors.
+        own = [(None, self._note("The surface is interpolated between the sensors' own "
+                                 "elevations, so none of them moves."))]
         self._topo_rows: Dict[str, List[QWidget]] = {
             name: self._add_rows(form, rows)
-            for name, rows in zip(_TOPO_TYPES, (flat, tilt, hill, custom, points))}
+            for name, rows in zip(_TOPO_TYPES, (flat, tilt, hill, custom, points, own))}
         return box
+
+    def _load_sensor_file_dialog(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(self, "Load sensor positions", "",
+                                              _SENSOR_FILTER)
+        if path:
+            self._load_sensor_file(path)
+
+    def _mesh_from_sensor_file_dialog(self) -> None:
+        """Read a sensor table and generate the mesh under it at once."""
+        if self._gen_busy is not None:
+            self.log("A mesh is being generated; wait for it, or Stop it, first.", "warn")
+            return
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Build a mesh from sensor positions", "", _SENSOR_FILTER)
+        if path and self._load_sensor_file(path).get("status") == "ok":
+            self._generate_mesh()
+
+    def _load_sensor_file(self, path: str, *, preview: bool = True) -> Dict[str, Any]:
+        """Use the sensor positions a table gives as the sensor array.
+
+        A surface array is meshed under the ground through its own sensors
+        unless another ground is chosen; one with sensors below others is
+        meshed around its boreholes.
+        """
+        name = Path(path).name
+        try:
+            positions, how = mesh3d_builder.read_sensor_table(path)
+        except Exception as exc:  # noqa: BLE001 - said under the button
+            self._sensor_file_label.setText(
+                f"<span style='color:{theme.color('red')}'>{html.escape(name)}: "
+                f"{html.escape(str(exc))}</span>")
+            self.log(f"Could not read the sensor file {name}: {exc}", "error")
+            return {"status": "failed", "error": str(exc)}
+        self._sensor_points, self._sensor_file = positions, str(path)
+        self._sensors_buried = mesh3d_builder.buried_electrodes(positions)
+        x, y, z = positions.T
+        layout = ("some lie below others, so it is meshed around its boreholes"
+                  if self._sensors_buried else "all on the surface")
+        self._sensor_file_label.setText(
+            f"<b>{html.escape(name)}</b>: {len(positions)} sensors, {layout}. "
+            f"x {x.min():g} to {x.max():g}, y {y.min():g} to {y.max():g}, "
+            f"z {z.min():g} to {z.max():g} m ({html.escape(how)}).")
+        self._array_type.setCurrentText(mesh3d_builder.FILE_ARRAY)
+        if not self._sensors_buried:
+            self._topo_type.setCurrentText(mesh3d_builder.SENSOR_GROUND)
+        self._update_visibility()
+        self.log(f"Loaded {len(positions)} sensor positions from {name} ({how}).",
+                 "success")
+        if preview:
+            self._preview_sensors()
+        return {"status": "ok", "electrodes": int(len(positions)),
+                "buried": bool(self._sensors_buried), "columns": how}
 
     def _load_topo_file(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
@@ -717,6 +836,15 @@ class Mesh3DModule(BaseModule):
         self._gen_btn.clicked.connect(self._generate_mesh)
         button_row.addWidget(self._gen_btn)
         form.addRow(buttons)
+        self._use_ert_btn = QPushButton("Use for ERT inversion")
+        self._use_ert_btn.setIcon(theme.icon("fa5s.share-square"))
+        self._use_ert_btn.setToolTip(
+            "Open the ERT page with this mesh as the mesh its inversion runs on. The page "
+            "checks that the mesh holds the loaded survey's electrodes, and shows it on "
+            "its Mesh tab.")
+        self._use_ert_btn.setEnabled(False)
+        self._use_ert_btn.clicked.connect(self._use_for_ert)
+        form.addRow(self._use_ert_btn)
 
         self._progress = QProgressBar()
         self._progress.setVisible(False)
@@ -740,8 +868,9 @@ class Mesh3DModule(BaseModule):
         element sizes at once, greys out the three steps it stands in for.
         """
         array_type = self._array_type.currentText()
-        grid = array_type == "Surface grid"
+        grid = self._surface_layout()     # a surface grid, or surface sensors from a file
         box = self._mesh_type.currentText() == "Box mesh"
+        self._sync_ground_choices()
         kind = self._engine_kind()
         e4d, gmsh = kind == "e4d", kind == "gmsh"
         prism, structured = kind == "prism", kind == "structured"
@@ -755,6 +884,7 @@ class Mesh3DModule(BaseModule):
         # 3. the domain: E4D's zones, a box, or a domain around the sensors
         set_rows_visible([self._para_depth], not e4d)
         set_rows_visible([self._bound_ext], not e4d and grid and not box)
+        set_rows_visible([self._outer], not e4d and not box)
         set_rows_visible(self._box_rows, not e4d and box)
         set_rows_visible([self._bh_lat_pad], not box and not grid and (structured or gmsh))
         set_rows_visible([self._bh_top_pad], not box and not grid and structured)
@@ -792,6 +922,28 @@ class Mesh3DModule(BaseModule):
         self._preview_btn.setText("Preview E4D layout" if e4d else "Preview sensors")
         self._update_zone_note()
 
+    def _surface_layout(self) -> bool:
+        """Whether the sensors all lie on the ground, as ``core.mesh_3d.surface_array``
+        decides: a surface grid, or a file with no sensor below another."""
+        array_type = self._array_type.currentText()
+        if array_type == mesh3d_builder.FILE_ARRAY:
+            return not self._sensors_buried
+        return array_type == "Surface grid"
+
+    def _sync_ground_choices(self) -> None:
+        """The ground through the sensors is there only for surface sensors
+        read from a file; any other array falls back to flat ground."""
+        own = (self._array_type.currentText() == mesh3d_builder.FILE_ARRAY
+               and self._surface_layout())
+        index = self._topo_type.findText(mesh3d_builder.SENSOR_GROUND)
+        item = self._topo_type.model().item(index)
+        if item is not None:
+            item.setEnabled(own)
+        if not own and self._topo_type.currentIndex() == index:
+            self._topo_type.blockSignals(True)
+            self._topo_type.setCurrentText("Flat")
+            self._topo_type.blockSignals(False)
+
     def _engine_note_text(self, kind: str) -> str:
         """What will build the mesh, which is not always the engine picked: the
         prism engine builds a structured grid for anything but a surface grid
@@ -799,9 +951,9 @@ class Mesh3DModule(BaseModule):
         engine = self._mesh_engine.currentText()
         if kind == "e4d":
             if self._e4d_config_path:
-                return (f"Builds the mesh {Path(self._e4d_config_path).name} describes, the "
-                        "way E4D does; the mesher below is still the one used.")
-            return ("Built the way E4D builds it: the ground surface triangulated, then TetGen "
+                return (f"Builds the mesh {Path(self._e4d_config_path).name} describes; "
+                        "the mesher below is still the one used.")
+            return ("The ground surface is triangulated, then TetGen "
                     "fills a fine zone around the electrodes, with a refinement point beside "
                     "each buried one, inside an outer zone reaching far enough for the "
                     "boundary conditions not to matter. The E4D .cfg and .poly are saved with "
@@ -813,16 +965,16 @@ class Mesh3DModule(BaseModule):
             return ("Auto: " if engine == "Auto" else "") + (
                 "PyGIMLi prisms, under a top that follows the ground.")
         if engine == "PyGIMLi prism":
-            return ("The prism mesh needs a surface grid with topography, so a structured grid "
-                    "is built instead.")
+            return ("The prism mesh needs sensors on the surface and a domain with "
+                    "topography, so a structured grid is built instead.")
         if engine == "Auto":
             return ("Auto: a structured PyGIMLi grid, with a node at every sensor and a flat "
-                    "top; the prism mesh is for a surface grid with topography.")
+                    "top; the prism mesh is for sensors on the surface with topography.")
         return "A structured PyGIMLi grid, with a node at every sensor and a flat top."
 
     def _domain_note_text(self, kind: str) -> str:
         """What the domain is for the current settings, or "" when the rows say it."""
-        grid = self._array_type.currentText() == "Surface grid"
+        grid = self._surface_layout()
         box = self._mesh_type.currentText() == "Box mesh"
         if kind == "e4d":
             if self._e4d_config_path:
@@ -837,8 +989,12 @@ class Mesh3DModule(BaseModule):
             return "A box from the origin, of the size below, with a flat top."
         if not grid:
             return "A block with a flat top around the sensors, padded as below."
+        own = self._topo_type.currentText() == mesh3d_builder.SENSOR_GROUND
         if kind == "prism":
             return "The mesh top follows the ground below."
+        if own:
+            return ("This mesh has a flat top at the highest sensor; the prism engine "
+                    "follows the ground through them.")
         if self._topo_type.currentText() != "Flat":
             return ("The sensors are placed on the ground below, but this mesh has a flat top "
                     "at the highest of them; the prism engine follows the ground.")
@@ -885,6 +1041,7 @@ class Mesh3DModule(BaseModule):
             "dz_fine": self._dz_fine.value(),
             "dz_coarse": self._dz_coarse.value(),
             "boundary_extension": self._bound_ext.value(),
+            "outer_spreads": self._outer.value(),
             "borehole_lateral_padding": self._bh_lat_pad.value(),
             "borehole_bottom_padding": self._bh_bot_pad.value(),
             "borehole_top_padding": self._bh_top_pad.value(),
@@ -915,6 +1072,9 @@ class Mesh3DModule(BaseModule):
         elif array == "Crosshole":
             cfg.update(boreholes=self._read_boreholes(), z_start=self._cross_z_start.value(),
                        z_end=self._cross_z_end.value(), n_bh_elec=self._cross_nelec.value())
+        elif array == mesh3d_builder.FILE_ARRAY:
+            cfg.update(electrode_positions=self._sensor_points,
+                       electrode_file=Path(self._sensor_file).name if self._sensor_file else "")
         else:
             cfg.update(n_surface_elec=self._s2b_n.value(), surface_dx=self._s2b_dx.value(),
                        surface_x0=self._s2b_x0.value(), surface_y=self._s2b_sy.value(), surface_z=self._s2b_sz.value(),
@@ -931,8 +1091,8 @@ class Mesh3DModule(BaseModule):
         if cfg["mesh_type"] == "Box mesh":
             cfg.update(box_length=self._box_length.value(), box_width=self._box_width.value(),
                        box_height=self._box_height.value())
-        # Zones only when there are any, so that a recipe without them reads as
-        # it did before they existed.
+        # Zones only when there are any, so that a recipe without them carries
+        # no zone entries.
         zones = self._zone_editor.zones()
         if zones:
             cfg["zones"] = zones
@@ -978,7 +1138,7 @@ class Mesh3DModule(BaseModule):
             return "e4d"
         if engine == "Gmsh (tetrahedral)":
             return "gmsh"
-        surface_topo = (self._array_type.currentText() == "Surface grid"
+        surface_topo = (self._surface_layout()
                         and self._mesh_type.currentText() == "Surface with topography")
         return "prism" if surface_topo and engine in ("Auto", "PyGIMLi prism") else "structured"
 
@@ -1262,7 +1422,21 @@ class Mesh3DModule(BaseModule):
         self.register_worker(worker, activity="Reading the E4D mesh")
         worker.start()
 
+    def _set_mesh_file(self, path: str) -> None:
+        """Where the mesh on screen is saved, which the ERT page can invert on."""
+        self._mesh_file = str(path or "")
+        self._use_ert_btn.setEnabled(bool(self._mesh_file))
+
+    def _use_for_ert(self) -> None:
+        """Hand the mesh to the ERT page, as its imported inversion mesh."""
+        if not self._mesh_file:
+            self.log("Generate a mesh with BMS ticked under Save as, or open an E4D mesh, "
+                     "first.", "warn")
+            return
+        self.handoffRequested.emit(_ERT_PAGE, "import_mesh", {"path": self._mesh_file})
+
     def _on_e4d_mesh_read(self, path: str, mesh: Any) -> None:
+        self._set_mesh_file(path)
         self._mesh = mesh
         self._sensors = None
         self._mesh_zones, self._mesh_zone_key = [], None   # not built here
@@ -1278,6 +1452,12 @@ class Mesh3DModule(BaseModule):
 
     def _generate_mesh(self) -> None:
         cfg = self._collect_config()
+        # A loaded E4D configuration carries its own electrodes.
+        if (cfg["array_type"] == mesh3d_builder.FILE_ARRAY and self._sensor_points is None
+                and not cfg.get("e4d_config_path")):
+            self.log("Load a sensor file in step 1 before generating the mesh.", "warn")
+            self._info.setText("Load a sensor file in step 1 first.")
+            return
         try:
             run = self.begin_persisted_run("mesh3d.build", "mesh3d.build")
         except Exception as exc:  # noqa: BLE001
@@ -1286,7 +1466,16 @@ class Mesh3DModule(BaseModule):
         output_dir = run.outputs_dir
         cfg["output_dir"] = str(output_dir)
         topography_points = cfg.pop("topography_points", None)
+        electrode_positions = cfg.pop("electrode_positions", None)
         inputs = {}
+        if electrode_positions is not None:
+            # The positions travel with the run, so the recipe does not point
+            # at a file that may move.
+            positions_path = run.inputs_dir / "mesh3d_electrode_positions.npy"
+            np.save(positions_path, np.asarray(electrode_positions, dtype=float))
+            inputs["electrode_positions"] = ArtifactRef.from_path(
+                positions_path, artifact_id="mesh3d:electrode_positions",
+                kind="electrode_positions", base_dir=run.run_dir)
         e4d_source = cfg.pop("e4d_config_path", "")
         if e4d_source:
             # The configuration travels with the run, as an input of its own,
@@ -1378,6 +1567,7 @@ class Mesh3DModule(BaseModule):
                     mesh, sensors, Path(cfg["output_dir"]), self._safe_name(), self._selected_formats())
             except Exception as exc:  # noqa: BLE001
                 self.log(f"Saving outputs failed: {exc}", "warn")
+        self._set_mesh_file(outputs.get("bms", ""))
         cells = summary.get("Cells", "?")
         nodes = summary.get("Nodes", "?")
         # What each E4D zone came out as, against the limit it was given: Gmsh,
@@ -1609,14 +1799,15 @@ class Mesh3DModule(BaseModule):
             import numpy as np
 
             self._plotter.clear()
-            # Electrodes and a translucent terrain: nothing drawn through a map.
+            # Sensors and a translucent terrain: nothing drawn through a map.
             self._colour_actor(None, cmaps.MESH_REGIONS, "coolwarm", None)
             self._overlay_sensors(sensors_df, labels=True)
-            if cfg["array_type"] == "Surface grid" and cfg["mesh_type"] == "Surface with topography":
+            if (mesh3d_builder.surface_array(cfg)
+                    and cfg["mesh_type"] == "Surface with topography"):
                 topo = mesh3d_builder.topography_function(cfg)
                 xs = np.asarray(sensors_df["x"], dtype=float)
                 ys = np.asarray(sensors_df["y"], dtype=float)
-                margin = max(cfg["dx"], cfg["dy"], 1.0) * 2.0
+                margin = max(mesh3d_builder.sensor_spacing(sensors_df, cfg), 1.0) * 2.0
                 gx = np.linspace(xs.min() - margin, xs.max() + margin, 40)
                 gy = np.linspace(ys.min() - margin, ys.max() + margin, 40)
                 gxx, gyy = np.meshgrid(gx, gy)
@@ -1627,7 +1818,7 @@ class Mesh3DModule(BaseModule):
             self._plotter.add_axes()
             self._plotter.reset_camera()
         except Exception as exc:  # noqa: BLE001
-            self.log(f"Electrode render failed: {exc}", "warn")
+            self.log(f"Sensor render failed: {exc}", "warn")
 
     def _render_mesh(self, mesh, sensors_df) -> None:
         if self._plotter is None:
@@ -1645,8 +1836,13 @@ class Mesh3DModule(BaseModule):
                     scalars = key
                     break
             cmap = self._colormap.set_target(cmaps.MESH_REGIONS, "coolwarm")
+            # The whole mesh's markers set the colours, outer region shown or not.
+            limits = (None if not scalars else
+                      [float(np.min(pv_mesh.cell_data[scalars])),
+                       float(np.max(pv_mesh.cell_data[scalars]))])
             actor = self._plotter.add_mesh(
-                pv_mesh, scalars=scalars, show_edges=True, edge_color="#555555",
+                self._without_outer(pv_mesh, scalars), scalars=scalars, show_edges=True,
+                edge_color="#555555", clim=limits,
                 line_width=0.5, cmap=cmaps.to_pyvista(cmap), show_scalar_bar=bool(scalars))
             self._colour_actor(actor, cmaps.MESH_REGIONS, "coolwarm", scalars)
             # The cells each zone took, seen through the rest of the mesh, and
@@ -1721,15 +1917,18 @@ class Mesh3DModule(BaseModule):
         try:
             mesh = self._pv.read(str(p))
             scalars = None
-            for key in ("Velocity", "velocity", "Marker", "marker", "Elevation", "Attribute"):
+            for key in ("Velocity", "velocity", "resistivity", "Resistivity", "Marker", "marker",
+                        "Elevation", "Attribute"):
                 if key in getattr(mesh, "cell_data", {}) or key in getattr(mesh, "point_data", {}):
                     scalars = key
                     break
             self._plotter.clear()
             self._zone_view = None          # an unrelated volume: no zones drawn over it
             cmap = self._colormap.set_target(cmaps.MODEL3D, "turbo")
+            # Resistivity spans decades, so it is coloured on a log scale.
             actor = self._plotter.add_mesh(mesh, scalars=scalars, cmap=cmaps.to_pyvista(cmap),
                                            opacity=0.6 if scalars == "Velocity" else 1.0,
+                                           log_scale=str(scalars).lower() == "resistivity",
                                            show_edges=False, show_scalar_bar=bool(scalars))
             self._colour_actor(actor, cmaps.MODEL3D, "turbo", scalars)
             try:
@@ -1742,6 +1941,7 @@ class Mesh3DModule(BaseModule):
             # previous module's framebuffer from showing through QtInteractor.
             QTimer.singleShot(0, self._refresh_plotter)
             self._mesh = None  # this is a pyvista object, not a pygimli mesh
+            self._set_mesh_file("")
             self._info.setText(
                 f"Viewing <b>{p.name}</b>  ·  {getattr(mesh, 'n_points', 0)} points"
                 + (f"  ·  scalar: {scalars}" if scalars else ""))
@@ -1761,9 +1961,15 @@ class Mesh3DModule(BaseModule):
             pv_mesh = self._pv.read(str(tmp))
             self._plotter.clear()
             cmap = self._colormap.set_target(cmaps.MESH_REGIONS, "coolwarm")
-            actor = self._plotter.add_mesh_clip_plane(pv_mesh, cmap=cmaps.to_pyvista(cmap))
-            self._colour_actor(actor, cmaps.MESH_REGIONS, "coolwarm",
-                               getattr(pv_mesh, "active_scalars_name", None))
+            scalars = next((key for key in ("Marker", "marker", "Attribute", "region")
+                            if key in pv_mesh.cell_data), None)
+            limits = (None if not scalars else
+                      [float(np.min(pv_mesh.cell_data[scalars])),
+                       float(np.max(pv_mesh.cell_data[scalars]))])
+            pv_mesh = self._without_outer(pv_mesh, scalars)
+            actor = self._plotter.add_mesh_clip_plane(pv_mesh, scalars=scalars, clim=limits,
+                                                      cmap=cmaps.to_pyvista(cmap))
+            self._colour_actor(actor, cmaps.MESH_REGIONS, "coolwarm", scalars)
             self._plotter.add_axes()
             self._plotter.reset_camera()
             self.log("Added interactive clipping plane.", "success")
@@ -1808,7 +2014,7 @@ class Mesh3DModule(BaseModule):
                           "Surface grid: nx, ny, dx, dy, x_offset, y_offset. Box: box_length, box_width, "
                           "box_height. Topography: z_flat, z_base, tilt_x, tilt_y, hill_base, hill_amp, "
                           "hill_sigma, hill_cx, hill_cy, topo_expr. Mesh: elec_refine, attractor, "
-                          "bound_refine, para_depth, dz_fine, dz_coarse, bound_ext, single_region. "
+                          "bound_refine, para_depth, dz_fine, dz_coarse, bound_ext, outer_spreads, single_region. "
                           "Borehole: bh_x, bh_y, bh_z_start, bh_z_end, bh_n. Output: mesh_name, "
                           "fmt_bms, fmt_vtk, fmt_csv. E4D engine (mesh_engine "
                           f"'{mesh3d_builder.E4D_ENGINE}'): e4d_fine_padding and "
@@ -1831,6 +2037,13 @@ class Mesh3DModule(BaseModule):
                           "does not smooth across its faces). Only inverted cells are "
                           "zoned, and on the E4D engine zones must lie in its fine zone. "
                           "run_ert_forward gives each zone its resistivity.")},
+                {"name": "load_sensor_file", "args": {"path": "str"},
+                 "desc": ("Use the sensor positions a table lists (CSV or text with x, y, "
+                          f"z; a header such as Cable,Elec,X,Y,Z) as the array "
+                          f"('{mesh3d_builder.FILE_ARRAY}'). Surface sensors are meshed "
+                          f"under the ground through their own elevations (topo_type "
+                          f"'{mesh3d_builder.SENSOR_GROUND}'); sensors below others "
+                          "around their boreholes. Previews them.")},
                 {"name": "load_e4d_config", "args": {"path": "str"},
                  "desc": ("Build from an existing E4D mesh configuration (.cfg) instead of "
                           "the sensor array; selects the E4D engine. 'generate' then builds "
@@ -1862,6 +2075,7 @@ class Mesh3DModule(BaseModule):
             "generate": lambda: self._agent_generate(),
             "run_ert_forward": lambda: self._agent_run_ert_forward(args),
             "load_mesh": lambda: self._agent_load_mesh(args.get("path")),
+            "load_sensor_file": lambda: self._agent_sensor_file(args.get("path")),
             "load_e4d_config": lambda: self._agent_e4d_file(args.get("path"), "config"),
             "open_e4d_mesh": lambda: self._agent_e4d_file(args.get("path"), "mesh"),
             "get_status": lambda: self._agent_status(),
@@ -1883,6 +2097,9 @@ class Mesh3DModule(BaseModule):
             "has_sensors": self._sensors is not None,
             "has_mesh": self._mesh is not None,
             "has_ert_forward": self._ert_fwd_result is not None,
+            "electrode_file": self._sensor_file,
+            "electrodes_from_file": (0 if self._sensor_points is None
+                                     else int(len(self._sensor_points))),
             "e4d_config": self._e4d_config_path,
             "e4d_mesher": self._e4d_mesher_status(),
             # Each zone with the cells it took in the last mesh (None before one).
@@ -1893,6 +2110,14 @@ class Mesh3DModule(BaseModule):
             "output_dir": "Managed by active Project",
             "last_result_keys": sorted(last.keys()),
         }
+
+    def _agent_sensor_file(self, path: Any) -> Dict[str, Any]:
+        if not path:
+            return {"status": "failed", "error": "Provide 'path'."}
+        p = Path(str(path))
+        if not p.exists():
+            return {"status": "failed", "error": f"File not found: {p}"}
+        return self._load_sensor_file(str(p))
 
     def _agent_e4d_file(self, path: Any, kind: str) -> Dict[str, Any]:
         if not path:
@@ -1981,6 +2206,7 @@ class Mesh3DModule(BaseModule):
             "dz_fine": lambda v: self._dz_fine.setValue(float(v)),
             "dz_coarse": lambda v: self._dz_coarse.setValue(float(v)),
             "bound_ext": lambda v: self._bound_ext.setValue(float(v)),
+            "outer_spreads": lambda v: self._outer.setValue(float(v)),
             "single_region": lambda v: self._single_region.setChecked(bool(v)),
             "bh_x": lambda v: self._bh_x.setValue(float(v)),
             "bh_y": lambda v: self._bh_y.setValue(float(v)),

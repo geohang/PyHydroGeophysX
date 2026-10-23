@@ -106,7 +106,7 @@ class ProcessingConfig:
     #: The removal also takes the field at every harmonic of the period, and
     #: where a level's windows cannot resolve those notches it biases the band:
     #: so one site's interference is not taken out of another site's data.
-    #: Bursts too short to fold are cleaned for every period, as before.
+    #: Bursts too short to fold are cleaned for every period.
     periodic_where_found: bool = True
     #: Leave out of the bands the harmonics inside those notches, where windows
     #: are long enough to resolve them (twice the period or more): the notch
@@ -312,7 +312,7 @@ def process_mt(runs: Union[TimeSeriesRun, Sequence[TimeSeriesRun]], *,
         clipped_remote = [saturated(run, ["hx", "hy"]) for run in remote_runs]
     if cfg.powerline:
         hum = float(cfg.powerline)
-        # Every run on its own; a night of bursts uses the cores (the transforms let go of the interpreter).
+        # Every run on its own, so many runs use the cores (the transforms let go of the interpreter).
         with ThreadPoolExecutor(_workers(len(local_runs) + len(remote_runs))) as pool:
             local_runs = list(pool.map(lambda run: remove_powerline(run, hum), local_runs))
             remote_runs = list(pool.map(lambda run: remove_powerline(run, hum), remote_runs))
@@ -428,7 +428,7 @@ def _process_rate(pairs, rate: float, cfg: ProcessingConfig) -> Optional[Dict[st
         return [a for a, _ in shared], [b for _, b in shared]
 
     # Runs, and a band's outputs, are independent, and numpy and scipy let go
-    # of the interpreter while they compute: a night of bursts uses the cores.
+    # of the interpreter while they compute, so many runs use the cores.
     # The results are gathered in run order, so they do not depend on timing.
     def all_spectra(scfg, wanted):
         local_levels, remote_levels = [], []

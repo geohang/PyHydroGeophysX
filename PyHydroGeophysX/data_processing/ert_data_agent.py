@@ -48,19 +48,16 @@ from PyHydroGeophysX.data_processing.ert_formats import (
 #      is what makes them usable where ResIPy cannot be installed.
 #   3. pyGIMLi, for its own unified format.
 #
-# Every reader here and in ``ert_formats`` is independent work, written from the
-# published file formats, the sample acquisitions under ``examples/data/ERT/``
-# and the standard DC-resistivity literature. Formats without a reader of their
-# own report that ResIPy is required rather than guessing at the layout.
+# Formats without a reader of their own report that ResIPy is required rather
+# than guessing at the layout.
 # =============================================================================
 
 def _notify(message: str) -> None:
     """Write a package status line to stderr.
 
-    These lines are diagnostics, not results. On stdout they corrupted the
-    output of generated workflow scripts, whose contract is a single JSON
-    document on stdout, so ``python run_<workflow>.py > result.json`` produced a
-    file that no JSON parser would accept.
+    These lines are diagnostics, not results. They go to stderr because a
+    generated workflow script writes a single JSON document to stdout, so
+    ``python run_<workflow>.py > result.json`` gives a file a JSON parser accepts.
     """
     print(message, file=sys.stderr)
 
@@ -141,14 +138,12 @@ def quiet_resipy(func):
 
     ``Project.computeFineMeshDepth`` runs ``df[['a','b','m','n']].replace(...)``
     and casts the result straight to int, so the silent downcasting pandas warns
-    about cannot change what ResIPy computes. The warning still fires on every
-    single load, names a line in a package we do not maintain, and there is
-    nothing the reader of a Studio log can do about it — which is the definition
-    of noise in a log people are meant to read.
+    about cannot change what ResIPy computes. The warning comes from a package
+    this project does not maintain and a user of the Studio log cannot act on it.
 
-    Scoped to the ResIPy call rather than installed at import: a library that
-    edits the process-wide warning filters hides the same class of warning in
-    its caller's code too.
+    The filter is scoped to the ResIPy call rather than installed at import,
+    because changing the process-wide warning filters would hide the same class
+    of warning in the caller's code too.
     """
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
@@ -164,27 +159,25 @@ def quiet_resipy(func):
 
 if _HAS_RESIPY:
     class _FastSurvey(_ResIPySurvey):
-        """ResIPy's ``Survey``, with its electrode-label lookup made per column.
+        """ResIPy's ``Survey`` with ``setSeqIds`` computed for all four columns at once.
 
-        ``Survey.setSeqIds`` turns the four label columns into electrode numbers
-        one cell at a time through ``DataFrame.__getitem__``, and a survey runs it
-        three times while it is built: on a 3.7k-reading E4D file that was most
-        of the load. This is the same lookup - the same label table, the later of
-        two equal labels winning, a ``KeyError`` for a label the table lacks -
-        over the columns at once. Everything else is ResIPy's own.
+        ``setSeqIds`` maps the a, b, m and n electrode labels to 1-based
+        positions in the electrode table. A survey calls it three times while
+        it is built, and a lookup cell by cell dominates the load time of a
+        file with thousands of readings. The contract: no readings give
+        ``isequence = None``; data and electrode labels of different kinds
+        (strings on one side only) leave ``isequence`` unchanged; a repeated
+        electrode label maps to its last position; a label missing from the
+        table raises ``KeyError``.
         """
 
         def setSeqIds(self):
-            ndata = self.df.shape[0]
-            if ndata == 0:
+            if len(self.df) == 0:
                 self.isequence = None
-                return
-            if self.hasDataString() != self.hasElecString():
-                return
-            lookup = {label: number for number, label in enumerate(self.elec.label, start=1)}
-            labels = self.df[['a', 'b', 'm', 'n']].to_numpy().ravel()
-            self.isequence = np.array([lookup[label] for label in labels],
-                                      dtype=int).reshape(ndata, 4)
+            elif self.hasDataString() == self.hasElecString():
+                position = {label: k + 1 for k, label in enumerate(self.elec.label)}
+                quads = self.df[['a', 'b', 'm', 'n']].to_numpy()
+                self.isequence = np.vectorize(position.__getitem__, otypes=[int])(quads)
 
 
 # Try pygimli as additional fallback
@@ -315,9 +308,8 @@ def _unified_ert_parser(fname):
         raw = fh.read().splitlines()
 
     # The exponent belongs to the number whether or not a decimal point comes
-    # first: with the point required, "2e-05" read as the two numbers 2 and -5,
-    # which shifted every column after it. pyGIMLi always writes the point, but
-    # other writers of this format do not.
+    # first ("2e-05" is one number). pyGIMLi always writes the point; other
+    # writers of this format do not.
     num_re = re.compile(r'[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?')
     seq = []  # ("header", [names]) | ("nums", [floats])
     for ln in raw:
@@ -405,13 +397,10 @@ def _abem_lund_parser(fname):
     two trailing numeric columns as resistivity-like values.
 
     The positions become 1-based indices into the electrode table here, where
-    they are known to be positions. Handed over raw, whole-number positions
-    that happened to fit 1..n were taken for indices by the loader, and a 1 m
-    line with one electrode missing came back with 20 of 21 quadrupoles wrong.
+    they are known to be positions: handed over raw, whole-number positions
+    that happen to fit 1..n would be taken for indices by the loader.
     """
-    # Signed, with or without a decimal point or an exponent. The pattern that
-    # required a point for the sign dropped it from integers ("-3" read as 3),
-    # moving every electrode left of the origin onto the right of it.
+    # Signed, with or without a decimal point or an exponent; "-3" keeps its sign.
     num_str = r'[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?'
     rows = []
     try:
@@ -586,9 +575,8 @@ def _normalize_elevation_axis(electrodes_df: pd.DataFrame) -> pd.DataFrame:
 # ---------------------------
 #: The ``ftype`` each instrument is handed to ResIPy as: the names its ``Survey``
 #: dispatches on (``ProtocolDC``, ``ResInv``, ``BGS Prime``, ``ARES``), not the
-#: labels its GUI shows. Given "Protocol DC", "ResInv (2D/3D)", "PRIME/RESIMGR"
-#: or "ARES (beta)", ResIPy raised "Sorry this file type is not implemented yet",
-#: so those files never reached its parsers even with it installed.
+#: labels its GUI shows ("Protocol DC", "ResInv (2D/3D)", "PRIME/RESIMGR",
+#: "ARES (beta)"), which it rejects as file types that are not implemented.
 _FTYPE_MAP = {
     "Protocol DC": "ProtocolDC",
     "Syscal": "Syscal",
@@ -666,16 +654,15 @@ def _normalize_instrument_name(instrument: str) -> str:
 
 def _looks_like_abem_lund_file(data_file_path: Path) -> bool:
     """
-    Heuristically detect ABEM Terameter/Lund-style exports.
+    Heuristically detect ABEM Terameter/Lund exports.
 
     A Res2DInv general-array file is excluded first, because it carries both
     marks this test looks for: the "Type of measurement (0=app. resistivity,
     1=resistance)" header line, and data rows opening with 4, which there is
-    the electrode count. Every such file used to be handed to the ABEM reader,
-    which takes the last two numbers of a row for resistance and apparent
-    resistivity - the resistivity and the chargeability, with IP - and finds no
-    row it can use at all without IP. That header names its own layout, so the
-    Res2DInv reader takes those files instead.
+    the electrode count. The ABEM reader takes the last two numbers of a row for
+    resistance and apparent resistivity - the resistivity and the chargeability,
+    with IP - and finds no usable row without IP. That header names its own
+    layout, so the Res2DInv reader takes those files.
     """
     if looks_like_res2dinv_general(data_file_path):
         return False
@@ -772,7 +759,7 @@ def _warn_resipy_once() -> None:
     """Say once per process that the run is on the fallback readers.
 
     Once, not once per file: a time-lapse survey loads hundreds of files through
-    this path, and a hint repeated hundreds of times is one nobody reads.
+    this path.
     """
     global _RESIPY_WARNED
     if _RESIPY_WARNED:
@@ -790,10 +777,9 @@ _READERS_REMOVED_IN_050 = ("Syscal", "Protocol DC", "Protocol IP")
 def _needs_resipy(instrument: str):
     """A reader for a format this package does not parse on its own.
 
-    Returning a raiser rather than guessing is deliberate. The unified reader
-    would accept a Syscal or Res2DInv protocol file and silently produce
-    nonsense from it, and a quadrupole table that parsed but is wrong is worse
-    than one that refused.
+    The reader raises rather than guess: the unified reader would accept a
+    Syscal or Res2DInv protocol file and return a wrong quadrupole table, which
+    is worse than a refusal.
     """
     removed = ""
     if instrument in _READERS_REMOVED_IN_050:
@@ -812,13 +798,12 @@ def _needs_resipy(instrument: str):
 def _lippmann_parser(fname):
     """Lippmann 4-Point Light: its own ``.tx0`` export, or a converted table.
 
-    The instrument writes ``.tx0``, so that is tried first. Falling back to the
-    unified reader keeps working for a survey that was already converted, which
-    is what this entry used to point at - but only for a file that is not a
-    ``.tx0`` at all. One carrying its electrode lines or column legend was read
-    by the reader that knows it, and that error is the answer: the unified
-    reader skips every ``*`` line as a comment and reads what is left as its own
-    layout, and its message used to replace the one that said what was wrong.
+    The instrument writes ``.tx0``, so that is tried first. A file that is not a
+    ``.tx0`` at all falls back to the unified reader, which reads a survey that
+    was already converted. A file carrying ``.tx0`` electrode lines or a column
+    legend is read by the ``.tx0`` reader alone and its error is the answer: the
+    unified reader skips every ``*`` line as a comment and would read what is
+    left in its own layout.
     """
     try:
         return parse_tx0(fname)
@@ -881,8 +866,8 @@ def _electrode_rows(table) -> List[List[float]]:
 def _electrode_list(electrodes_df: pd.DataFrame) -> List[Electrode]:
     """One :class:`Electrode` per table row, numbered by its row label plus one.
 
-    Read column by column: ``DataFrame.iterrows`` built a Series per row, and
-    the loaders' row loops cost more than the rest of a load together.
+    Read column by column rather than with ``DataFrame.iterrows``, which builds
+    a Series per row.
     """
     return [Electrode(label + 1, float(x), float(y), float(z))
             for label, x, y, z in zip(electrodes_df.index,
@@ -919,14 +904,13 @@ def _survey_electrodes_only(electrodes_df: pd.DataFrame, df: pd.DataFrame,
                             n_listed: int, file_name: str):
     """Cut the electrode table down to the electrodes the survey uses.
 
-    A DAS-1 header lists every electrode of the installation - 280 on nine
-    cables for the shipped sample - while one acquisition addresses a subset of
-    them (56 on one cable), and the electrode file surveyed for it lists only
-    those, in electrode order. ResIPy numbers the survey the same way, so the
-    pair loaded there and failed here against the full table. A reader that
-    knows the subset reports it as ``df.attrs["survey_electrodes"]``; the table
-    keeps those electrodes, in index order, and the quadrupoles are renumbered
-    onto them.
+    A DAS-1 header lists every electrode of the installation (280 on nine cables
+    in the shipped sample), while one acquisition addresses a subset of them
+    (56 on one cable), and the electrode file surveyed for it lists only those,
+    in electrode order, as ResIPy numbers the survey. A reader that knows the
+    subset reports it as ``df.attrs["survey_electrodes"]``; the table keeps
+    those electrodes, in index order, and the quadrupoles are renumbered onto
+    them.
     """
     used = [int(i) for i in (df.attrs.get("survey_electrodes") or ())]
     if len(used) != n_listed:
@@ -966,11 +950,8 @@ def _load_ert_embedded_parsers(
     ERT data loader using this package's own readers.
     Used when ResIPy is not installed.
 
-    ACKNOWLEDGEMENT & LICENSE
-    -------------------------
-    The readers are independent work, written from the published file formats
-    and the sample acquisitions under ``examples/data/ERT/``. A format without a
-    reader here reports that ResIPy is required rather than guessing.
+    A format without a reader here reports that ResIPy is required rather than
+    guessing.
     """
     requested_instrument = str(instrument)
     instrument = _normalize_instrument_name(requested_instrument)
@@ -1026,20 +1007,18 @@ def _load_ert_embedded_parsers(
         _notify(f"[PyHydroGeophysX] Successfully parsed {len(df)} measurements and {len(elec_array)} electrodes")
     except NotImplementedError:
         # "This format has no reader here" is a statement about the format, not a
-        # parse failure, so the generic fallback below must not answer it. The
-        # unified reader will happily consume a Syscal or protocol file and
-        # return a quadrupole table built from the wrong columns, and a wrong
-        # table that parsed is worse than an honest refusal.
+        # parse failure, so the generic fallback below must not answer it: the
+        # unified reader would build a quadrupole table from the wrong columns
+        # of a Syscal or protocol file.
         raise
     except Exception as e:
         _notify(f"[PyHydroGeophysX] Parser {parser_name} failed: {e}")
         # Another reader is tried only when this one was a guess. A format the
         # caller chose, or one whose header said what it is, was read by the
-        # reader that knows it, and its refusal is the answer. The unified
-        # reader used to be tried regardless: it read a DAS-1 file missing its
-        # data marker as one reading on one electrode, took the numbers of a
-        # Subsurface Insights header for 185 electrodes, and its message
-        # replaced the one that said what was wrong.
+        # reader that knows it, and its refusal is the answer: the unified
+        # reader would read a DAS-1 file missing its data marker as one reading
+        # on one electrode, and its message would replace the one that said
+        # what was wrong.
         fallback = _EMBEDDED_PARSER_MAP.get(chosen) if guessed else None
         if fallback is None or fallback is parser_func:
             raise ValueError(f"Failed to parse ERT data with {parser_name}: {e}") from e
@@ -1082,7 +1061,7 @@ def _load_ert_embedded_parsers(
         electrodes_df = _normalize_elevation_axis(electrodes_df)
 
     # Override electrode positions from external file if provided
-    # This matches ResIPy behavior: external electrode file takes priority
+    # An external electrode file takes priority over the file's own positions.
     header_electrodes = None
     if electrode_file is not None:
         electrode_file_path = Path(electrode_file)
@@ -1094,8 +1073,8 @@ def _load_ert_embedded_parsers(
 
         # Load electrode coordinates from file
         try:
-            # Columns by meaning, not position: a vendor table's ID column was
-            # read as a coordinate, and a header row made loadtxt fail.
+            # Columns by meaning, not position: a vendor table has an ID column
+            # and may have a header row.
             elec_data, _, _ = read_electrode_table(electrode_file_path)
 
             # A file listing only the electrodes the survey uses is laid onto
@@ -1121,11 +1100,11 @@ def _load_ert_embedded_parsers(
     elec_x_valid = elec_x[elec_valid]
     elec_idx_valid = np.arange(1, n_elec + 1, dtype=int)[elec_valid]
 
-    # One numbering for all four electrode columns. Deciding per column shifted
-    # A - the only column of fielddataline2.dat that contains a 0 - by one and
-    # left B, M and N alone, so readings came out with coincident electrodes.
-    # When the pooled values fit neither base (a 1-based file that marks remote
-    # electrodes with 0, say), the per-column cases below still apply.
+    # One numbering for all four electrode columns: deciding per column would
+    # shift a column that alone contains a 0 and leave the others, giving
+    # readings with coincident electrodes. When the pooled values fit neither
+    # base (a 1-based file that marks remote electrodes with 0, say), the
+    # per-column cases below apply.
     abmn_numeric = [pd.to_numeric(df[c], errors='coerce')
                     for c in ('a', 'b', 'm', 'n') if c in df.columns]
     shared_offset = None
@@ -1193,7 +1172,7 @@ def _load_ert_embedded_parsers(
                 mapped = np.array([rank_map[v] for v in values], dtype=int)
                 return pd.Series(mapped, index=series.index, dtype=int)
 
-            # Last fallback: preserve previous behavior.
+            # Last fallback: the rounded values.
             return pd.Series(rounded.astype(int), index=series.index, dtype=int)
         labels = series.astype(str).str.strip()
         if label_map:
@@ -1470,7 +1449,7 @@ def _load_ert_pygimli(
         electrodes_df = _normalize_elevation_axis(electrodes_df)
 
     # Override electrode positions from external file if provided
-    # This matches ResIPy behavior: external electrode file takes priority
+    # An external electrode file takes priority over the file's own positions.
     header_electrodes = None
     if electrode_file is not None:
         electrode_file_path = Path(electrode_file)
@@ -1482,8 +1461,8 @@ def _load_ert_pygimli(
 
         # Load electrode coordinates from file
         try:
-            # Columns by meaning, not position: a vendor table's ID column was
-            # read as a coordinate, and a header row made loadtxt fail.
+            # Columns by meaning, not position: a vendor table has an ID column
+            # and may have a header row.
             elec_data, _, _ = read_electrode_table(electrode_file_path)
             if len(elec_data) != len(electrodes_df):
                 raise ValueError(
@@ -1508,18 +1487,12 @@ def _load_ert_pygimli(
     m = np.array(data('m')) if 'm' in data.dataMap() else np.zeros(n_data, dtype=int)
     n = np.array(data('n')) if 'n' in data.dataMap() else np.zeros(n_data, dtype=int)
 
-    # Some BERT-style files load through PyGIMLi with indices shifted by -1
+    # Some BERT-format files load through PyGIMLi with indices shifted by -1
     # (e.g., [1..N] becomes [0..N-1], or [0..N-1] becomes [-1..N-2]).
     # Normalize so the lowest index is 1, which is the electrode labelling every
-    # consumer downstream assumes.
-    #
-    # Landing on 0 instead of 1 was not enough, and failed far from here: a
-    # correction that only removed negatives left fielddataline2.dat indexed
-    # [0..71] for 72 electrodes, ResIPy looked up the label '0' while its own
-    # electrodes are labelled '1'..'72', and the export died with a bare
-    # KeyError('0') - which surfaced as "Failed to rebuild the default
-    # reciprocal-pair export with ResIPy: '0'" and blocked the whole survey.
-    # DAS-1 and E4D files already load as 1-based, so this is a no-op for them.
+    # consumer downstream assumes: ResIPy labels its electrodes '1'..'N', so an
+    # index of 0 fails its label lookup. DAS-1 and E4D files already load as
+    # 1-based, so this is a no-op for them.
     abmn_all = np.concatenate([a, b, m, n]).astype(float)
     finite_abmn = abmn_all[np.isfinite(abmn_all)]
     if finite_abmn.size > 0:
@@ -1539,7 +1512,7 @@ def _load_ert_pygimli(
     
     # Get apparent resistivity or resistance. haveData, not "in dataMap": a
     # pyGIMLi ERT container always lists rhoa, err and k, zero-filled when the
-    # file has none, so a resistance-only file used to load with rhoa = 0.
+    # file has none, so a resistance-only file would load with rhoa = 0.
     app_res_source = "unknown"
     if data.haveData('rhoa'):
         rhoa = np.array(data('rhoa'))
@@ -1555,8 +1528,7 @@ def _load_ert_pygimli(
 
     # Get error if available, as a fraction. The file may hold fractions or
     # percent (fielddataline2.dat holds percent: median 0.61, meaning 0.61 %);
-    # the embedded parsers normalise it with the same helper, and taking it raw
-    # here gave that file a median error of 61 %.
+    # the embedded parsers normalise it with the same helper.
     raw_error = None
     for token in ('err', 'error'):
         if token in data.dataMap() and data.haveData(token):
@@ -1687,15 +1659,16 @@ def _resipy_electrode_table(coords) -> Optional[pd.DataFrame]:
 def _survey_without_project(fname: str, ftype: str, electrode_file=None):
     """ResIPy's survey of one file as ``Project.createSurvey`` leaves it, built without the Project.
 
-    ``createSurvey`` spent four fifths of a 3.7k-reading E4D load in per-cell
-    pandas lookups and in ``Project.computeFineMeshDepth``, a meshing setting
-    this loader never reads. :class:`_FastSurvey` makes the lookups per column,
-    and leaving out the Project leaves the survey's table and electrodes as
-    the Project would have, except where :func:`_project_would_change` says
-    otherwise. There, and wherever ``electrode_file`` does not lay onto the
-    survey as ``Project.setElec`` requires, this returns None and the caller
-    takes ResIPy's own route, which meets the same case and answers it as it
-    always has. Reading the data file raises what ``createSurvey`` raises.
+    ``createSurvey`` spends most of the load time of an E4D file with thousands
+    of readings in per-cell pandas lookups and in
+    ``Project.computeFineMeshDepth``, a meshing setting this loader never
+    reads. :class:`_FastSurvey` makes the lookups per column, and leaving out
+    the Project leaves the survey's table and electrodes as the Project would
+    have, except where :func:`_project_would_change` says otherwise. There, and
+    wherever ``electrode_file`` does not lay onto the survey as
+    ``Project.setElec`` requires, this returns None and the caller takes
+    ResIPy's own route. Reading the data file raises what ``createSurvey``
+    raises.
 
     Returns ``(survey, header_electrodes)``: the second is the data file's own
     electrode rows when ``electrode_file`` replaced them, else None.
@@ -1915,7 +1888,7 @@ def load_ert_resipy(
     # method name 'createSurvey' to load data files and create a survey object.
     # For the formats in _SURVEY_ONLY_FTYPES the survey is built without the
     # Project wherever that leaves it the same (see _survey_without_project),
-    # in a tenth of the time; its errors are createSurvey's, answered below.
+    # which is much faster; its errors are createSurvey's, answered below.
     standalone = None
     try:
         if ftype in _SURVEY_ONLY_FTYPES:
@@ -1979,8 +1952,7 @@ def load_ert_resipy(
         # Default fallback order for non-BERT instruments: 1) this package's own
         # reader of the same format -> 2) PyGIMLi, but only for a format its
         # loader reads (_PYGIMLI_READS). For any other it is a guess at a file
-        # that already said what it is: it loaded nonsense, or failed with an
-        # unrelated "'DataMap' object has no attribute 'size'" in place of the
+        # that already said what it is, and its failures would hide the
         # readers' own errors, which are reported instead.
         pygimli_may_read = _HAS_PYGIMLI and instrument in _PYGIMLI_READS
         if _HAS_EMBEDDED_PARSERS:
@@ -2052,8 +2024,8 @@ def load_ert_resipy(
             print(f"   Updated electrode positions from {electrode_file_path.name}")
         else:
             try:
-                # Columns by meaning, not position: a vendor table's ID column was
-                # read as a coordinate, and a header row made loadtxt fail.
+                # Columns by meaning, not position: a vendor table has an ID
+                # column and may have a header row.
                 elec_data, _, _ = read_electrode_table(electrode_file_path)
                 if survey.elec is not None and len(survey.elec):
                     header_electrodes = _electrode_rows(survey.elec)
@@ -2736,16 +2708,12 @@ def export_for_inversion(
 
                     df = prj.surveys[0].df.copy()
             except Exception as e:
-                # Any failure of this path falls back, not only the one whose
-                # message happens to say "no reciprocal". ResIPy re-parses the
-                # *raw* file here with its own reader, so the ways it can fail
-                # are its reader's, not this package's, and it does not report
-                # them in a common vocabulary: fielddataline2.dat comes back as
-                # a bare KeyError('0') because that parser numbers electrodes
-                # from zero while its own labels start at one. Matching on the
-                # message turned a recoverable file into a lost survey - and
-                # the legacy export below handles it, which is the whole reason
-                # the fallback exists.
+                # Any failure of this path falls back, whatever its message.
+                # ResIPy re-parses the *raw* file here with its own reader, so
+                # the ways it can fail are its reader's, not this package's,
+                # and they are not reported in a common vocabulary (a bare
+                # KeyError('0') for electrodes numbered from zero, say). The
+                # full-dataset export below handles those files.
                 print(
                     f"   ResIPy could not rebuild the reciprocal-pair export "
                     f"({type(e).__name__}: {e}); using the full-dataset export "
@@ -2954,7 +2922,7 @@ def export_for_inversion(
         print(f"   DEBUG: Wrote {len(valid_rows)} valid observations")
         print(f"   Exported data to {path}")
 
-        print("   Validating geometric factors... [CODE-VERSION: 2026-02-20-v4-safe-export]")
+        print("   Validating geometric factors...")
         try:
             import pygimli as pg
             import pygimli.physics.ert as ert_pg

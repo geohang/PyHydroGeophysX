@@ -2,9 +2,9 @@
 
 A row of view controls in a ``QHBoxLayout`` cannot be narrower than all of
 them side by side, and that sum becomes the page's minimum width, then the
-window's: the shared section view's twelve controls alone held every ERT and
-seismic page at 1600 px, so the studio could not fit a 1920 px screen beside
-its project tree and assistant panel. In a :class:`FlowLayout` the same row is
+window's: the shared section view's many controls alone can hold every ERT and
+seismic page wider than the screen leaves room for beside the project tree and
+assistant panel. In a :class:`FlowLayout` the same row is
 one line when there is room and wraps when there is not, so its minimum width
 is that of its widest item.
 

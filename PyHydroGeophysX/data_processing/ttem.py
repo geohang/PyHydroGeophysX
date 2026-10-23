@@ -597,11 +597,9 @@ def load_ttem_sounding(
         "orientation": "z", "receiver_type": "dbdt",
         "response_sign": -1.0, "loop_area": effective_area, "loop_turns": 1,
         "source_moment": 1.0, "data_scale": 1.0, "auto_scale": False,
-        # Read at the gate centre. That was
-        # measured on a TEM2Go project rather than on a tTEM one, so it is an
-        # inference from the shared engine rather than a direct check here; see
-        # local_plans/temcompany_forward_alignment.md. Set "linear_time" to
-        # average over the window instead, which is what this used to do.
+        # Read at the gate centre, as TEMcompany's own forward does for the
+        # TEM2Go (the tTEM shares its engine). Set "linear_time" to average
+        # over the window instead.
         "gate_window": "centre",
     }
     result: Dict[str, Any] = {

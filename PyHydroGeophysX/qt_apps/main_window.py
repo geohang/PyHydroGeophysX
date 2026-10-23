@@ -7,7 +7,7 @@ import json
 import os
 import time
 from pathlib import Path
-from typing import Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 import pyqtgraph as pg
 from PySide6.QtCore import QEvent, QSettings, QTimer, Qt
@@ -267,17 +267,16 @@ class PyHydroGeophysXStudio(QMainWindow):
     def _switch_project(self, path: Path, landing: Optional[str]) -> bool:
         """Point the studio at *path* and open *landing* (stay put for None).
 
-        The Project folder is also the output folder — the two were separate
-        commands that set the same field, which left it possible to "open" one
-        Project and write results into another. Every entry point now runs the
-        same write probe, so an unwritable folder is refused before a run starts
-        rather than after one finishes.
+        The Project folder is also the output folder: one command sets both, so
+        a Project cannot be "opened" while results are written into another.
+        Every entry point runs the same write probe, so an unwritable folder is
+        refused before a run starts rather than after one finishes.
 
         Leaving the default folder keeps every page as it is. Nobody chose that
         folder, so whatever is open is the work the new Project is for, and the
         question about it comes as data is being added - resetting the pages
         then would throw away the very survey being set up. Moving between two
-        named Projects starts the pages afresh, as it always has.
+        named Projects starts the pages afresh.
         """
         carry_session = bool(getattr(self.state, "default_project", False))
         # Unsaved runs live in the Project being left behind, so the decision has
@@ -363,7 +362,7 @@ class PyHydroGeophysXStudio(QMainWindow):
         file_menu.addSeparator()
         # The Streamlit bridge and the raw module JSON are for driving this app
         # from the web workflow. They are not how a person gets their results
-        # out, so they no longer sit next to the command that is.
+        # out, so they sit apart from the command that is.
         bridge = file_menu.addMenu("Streamlit Bridge")
         self._add_action(bridge, "Open Project Context…", self._open_context)
         self._add_action(bridge, "Save Studio Result", self._save_result)
@@ -430,15 +429,15 @@ class PyHydroGeophysXStudio(QMainWindow):
         self.addToolBar(toolbar)
         self._main_toolbar = toolbar
         toolbar.addAction(self._properties_dock.toggleViewAction())
-        # The toolbar carries the two commands a session actually repeats. The
-        # bridge "Save" that used to sit here wrote a JSON manifest for the
-        # Streamlit app, which read as the button that saved your results.
-        # New beside Open: a Project is made by naming it, and that was easy to
-        # miss with only a File menu entry that opened a bare folder picker.
+        # The toolbar carries the commands a session actually repeats. The
+        # Streamlit bridge commands stay in the File menu, so no toolbar button
+        # reads as "save my results" while writing a manifest. New sits beside
+        # Open: a Project is made by naming it, which a File menu entry that
+        # opened a bare folder picker would leave easy to miss.
         self._add_action(toolbar, "New Project", self._new_project, icon_name="fa5s.folder-plus")
         self._add_action(toolbar, "Open Project", self._open_project, icon_name="fa5s.folder-open")
-        # "Save" now means what a user reads it to mean. It used to write the
-        # Streamlit bridge manifest, which is why it moved off the toolbar.
+        # "Save" adds the finished runs to the Project's history; the Streamlit
+        # bridge commands are in the File menu.
         self._save_button = self._add_action(
             toolbar, "Save", self._save_runs, icon_name="fa5s.save")
         self._add_action(toolbar, "Export", self._export_results, icon_name="fa5s.file-export")
@@ -531,6 +530,7 @@ class PyHydroGeophysXStudio(QMainWindow):
             page.resultsUpdated.connect(self._refresh_properties)
             page.viewMeshRequested.connect(self._view_mesh_in_3d)
             page.navigateRequested.connect(self.show_module)
+            page.handoffRequested.connect(self._hand_off)
             if hasattr(page, "activityChanged"):
                 page.activityChanged.connect(self._refresh_status)
             if hasattr(page, 'startAIRequested'):
@@ -561,10 +561,10 @@ class PyHydroGeophysXStudio(QMainWindow):
 
         The open page's work comes first, with how long it has been going; a
         page that is not on screen but still working is named as well, so
-        moving to another page never makes a run look finished. A 420-step
-        time-lapse run once spent an hour writing its results after the
-        inversion under a status bar that read "Ready" - which is how a studio
-        that is working gets closed.
+        moving to another page never makes a run look finished. A long
+        time-lapse run keeps writing its results after the inversion ends; a
+        status bar that read "Ready" meanwhile would invite closing a studio
+        that is still working.
         """
         label = getattr(self, "_status_label", None)
         if label is None:
@@ -720,6 +720,24 @@ class PyHydroGeophysXStudio(QMainWindow):
                 0, lambda page=page, path=path: page.load_view_file(path))
         else:
             self.log("Mesh 3D module cannot display the file.", "warn")
+
+    def _hand_off(self, key: str, action: str, args: Any) -> None:
+        """Open the page ``key`` and apply one of its actions there: one page
+        handing its work to another (``BaseModule.handoffRequested``)."""
+        self.show_module(key)
+        page = self._pages.get(key)
+        if page is None or not hasattr(page, "agent_apply"):
+            return
+
+        def apply() -> None:
+            # The page says in its own log why an action it was handed failed.
+            try:
+                page.agent_apply(action, dict(args or {}))
+            except Exception as exc:  # noqa: BLE001 - said in the log, not a traceback
+                self.log(f"{page.module_title}: {exc}", "error")
+
+        # Once the page is exposed: a 3D view renders only when it is on screen.
+        QTimer.singleShot(0, apply)
 
     def _current_page(self) -> Optional[QWidget]:
         return self._stack.currentWidget()
@@ -1176,8 +1194,8 @@ class PyHydroGeophysXStudio(QMainWindow):
         # Ask the page for its own key rather than reusing the navigator's.
         # The two differ for four modules ("ert" navigates to a page whose
         # module_key is "ert_processing"), and a module writes its result under
-        # the page's key. Looking it up by the navigator's key found nothing on
-        # exactly the modules that had something, and reported it as no result.
+        # the page's key. A lookup by the navigator's key would find nothing
+        # for exactly those modules and report no result.
         page = self._current_page()
         key = getattr(page, "module_key", None) or self.state.selected_module
         result = self.state.module_results.get(key)

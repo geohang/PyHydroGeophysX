@@ -74,8 +74,8 @@ class PlainDoubleSpinBox(QDoubleSpinBox):
     """A number box that shows a value as one would write it: 50, 0.05, 100000.
 
     ``setDecimals`` still sets the precision a value is kept and typed to; only
-    the trailing zeros are left off, so a λ of 50 no longer reads "50.000" and
-    a floor of 100000 Ω·m no longer reads "100000.00".
+    the trailing zeros are left off, so a λ of 50 reads "50" rather than
+    "50.000" and a floor of 100000 Ω·m reads "100000" rather than "100000.00".
     """
 
     def textFromValue(self, value: float) -> str:  # noqa: N802 - Qt override

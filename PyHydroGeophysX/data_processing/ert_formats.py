@@ -1,12 +1,12 @@
-"""Independently written ERT instrument-format readers and reciprocal analysis.
+"""ERT instrument-format readers and reciprocal analysis.
 
-Every routine here was written from the file format itself and from the standard
-DC-resistivity literature, not from any other implementation. The DAS-1 reader
-works off the column map the format writes into its own header, so it reads the
-layout out of each file rather than assuming one; the sample acquisitions under
-``examples/data/ERT/DAS/`` were the reference while writing it. The reciprocal
-analysis implements the definition given in the induced-polarisation literature
-(Slater et al. 2000; Binley and Kemna 2005; Binley and Slater 2020, ch. 6).
+The readers are written from the instruments' file descriptions and the
+standard DC-resistivity literature; three PRIME layout details noted in
+:func:`parse_bgs_prime` match ResIPy's reader. The DAS-1 reader works off the
+column map the format writes into its own header, so it reads the layout out of
+each file rather than assuming one. The reciprocal analysis implements the
+definition given in the induced-polarisation literature (Slater et al. 2000;
+Binley and Kemna 2005; Binley and Slater 2020, ch. 6).
 
 The return contract matches the other readers in
 :mod:`PyHydroGeophysX.data_processing.ert_data_agent`: ``(elec, df)`` where
@@ -1155,11 +1155,11 @@ def parse_bgs_prime(path: str | Path) -> Tuple[np.ndarray, pd.DataFrame]:
     electrode order. Gaps in the numbering are kept as gaps, and
     ``survey_electrodes`` lists the electrodes the readings use.
 
-    Written against a 48-electrode Trail Creek export (firmware RX 1.00.5974).
-    Three things that file does not show - blank current electrodes, the
+    The layout is that of a 48-electrode export (firmware RX 1.00.5974).
+    Three details that export does not show - blank current electrodes, the
     ``**Error`` lines and the ``no_of_electrodes:`` table of ``label x y z``
-    rows after one header line - follow ResIPy's ``primeParserTab``
-    (Blanchy et al. 2020).
+    rows after one header line - are handled as ResIPy's PRIME reader
+    (``primeParserTab``; Blanchy et al., 2020) expects them.
     """
     source = Path(path)
     meta: Dict[str, str] = {}
@@ -1757,9 +1757,9 @@ def reciprocal_errors(
     # Compare in one sign convention, then report in the row's own convention.
     canonical = pd.to_numeric(out["resist"], errors="coerce") * sign
 
-    # A repeat in the same direction used to be scored as a reciprocal, so a
-    # 1.00 / 1.08 stack read as a 7.7 % reciprocal error and both rows went at a
-    # 5 % cut. Stack each direction first, then compare the two directions.
+    # A repeat in the same direction is not a reciprocal: a 1.00 / 1.08 stack
+    # would read as a 7.7 % reciprocal error. Stack each direction first, then
+    # compare the two directions.
     exchanged = pd.Series(_reciprocal_direction(out, key), index=out.index)
     stacks = canonical.groupby([key, exchanged]).transform("mean")
     normal = stacks.where(~exchanged).groupby(key).transform("mean")

@@ -89,7 +89,7 @@ from PyHydroGeophysX.workflows import (
 
 _PRODUCTS = [("water_content", "Water content"), ("porosity", "Porosity (where saturated)")]
 #: The steps the assistant names. Each opens the view and the panel the step is
-#: done in (see _go_to); the page itself no longer pages through them.
+#: done in (see _go_to); the page itself does not page through them.
 _STEPS = ["Data", "Layers", "Target", "Parameters", "Run", "Results"]
 _MODEL_TAB, _LAYERS_TAB, _RESULTS_TAB, _SERIES_TAB = range(4)
 #: The "Use example" model bundle, under the source repository's examples/: the
@@ -240,7 +240,7 @@ class GeoHydrologyModule(BaseModule):
         self._run_busy: Optional[BusyStateController] = None
         self._workflow_recipe_path = ""
         #: Why the last run did not finish - its error, or that it was
-        #: stopped - for the assistant, whose status otherwise still showed
+        #: stopped - for the assistant, whose status would otherwise still show
         #: the result before it; "" while a run is under way or succeeded.
         self._run_problem = ""
         self._current = 0
@@ -1286,7 +1286,7 @@ class GeoHydrologyModule(BaseModule):
             # The run itself failed - out of memory, arrays of the wrong shape -
             # and its own reason is what helps, beside the settings that can be
             # changed before trying again. Exporting the configuration in its
-            # place blamed a backend that was there.
+            # place would blame a backend that is there.
             self.log(f"Estimation failed: {message}", "error")
             self._run_status.setText(f"The estimate failed: {message}")
             theme.set_tone(self._run_status, "error")
@@ -1372,10 +1372,11 @@ class GeoHydrologyModule(BaseModule):
         """Open the model the run has just inverted, so this page is not blank.
 
         The automatic run reaches this page having already recovered the
-        resistivity models, and the page was still showing "No model folder set.
-        Use 'Select folder…'" - asking the user to go and find something the run
-        was holding. The inversion step now writes the bundle these controls
-        read, so the folder is known and the layers it found are on screen.
+        resistivity models; without this the page would still show "No model
+        folder set. Use 'Select folder…'", asking the user to go and find
+        something the run is holding. The inversion step writes the bundle
+        these controls read, so the folder is known and the layers it found
+        are on screen.
 
         Anything already loaded is left alone; a run must not discard work
         somebody was in the middle of.

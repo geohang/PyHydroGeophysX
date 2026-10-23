@@ -1,10 +1,9 @@
 """Process-safe persistence for joint-inversion observations.
 
 The array packing lives in :mod:`PyHydroGeophysX.data_processing.run_inputs`,
-which every module now writes its run inputs through. The manifest keys below
-stay as they were so joint runs saved before that move still load; only the
-ERT/SRT branches, which hand off to PyGIMLi's own writers, are specific to this
-module.
+which every module writes its run inputs through. The manifest keys below are
+kept so that joint runs saved earlier still load; only the ERT/SRT branches,
+which hand off to PyGIMLi's own writers, are specific to this module.
 """
 
 from __future__ import annotations

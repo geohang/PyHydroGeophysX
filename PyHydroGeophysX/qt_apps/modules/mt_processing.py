@@ -2,8 +2,8 @@
 
 The page reads an instrument's recording (Phoenix MTU-5C and legacy MTU,
 Metronix ATS, Zonge Z3D, LEMI-424) or sites processed elsewhere (EDI, EMTF
-XML, Z- and J-files). It estimates each site's impedance and tipper with
-robust, optionally remote-referenced processing, and inverts the sites for
+XML, Z- and J-files). It estimates each site's impedance and tipper by robust
+regression, optionally with a remote reference, and inverts the sites for
 resistivity: Occam 1D per site - with the static shift as a free parameter,
 an optional TEM sounding that fixes it, and a water-content profile - and a
 2D TE/TM section along a profile on SimPEG.
@@ -79,8 +79,8 @@ _RECORDING_FILTER = ("MT time series (*.bin *.td_* *.ats *.z3d *.Z3D *.tbl *.TBL
 _TF_FILTER = "MT transfer functions (*.edi *.EDI *.xml *.zss *.zrr *.zmm *.j);;All files (*)"
 _TEM_FILTER = "TEM sounding (*.csv *.txt *.dat *.npz);;All files (*)"
 #: Periods (s) looked for as a receiver's own interference when a recording is
-#: read: Phoenix MTU-5Cs at Manchester, Iowa (October 2026) carried a pulse
-#: every 4 s of GPS time and a disturbance with every 30 s burst schedule.
+#: read: Phoenix MTU-5C receivers can carry a pulse every 4 s of GPS time and
+#: a disturbance with every 30 s burst schedule.
 _RECEIVER_PERIODS = (4.0, 30.0)
 _EXAMPLE_SITE = "data/MT/NMX20.xml"
 #: Share of a channel's full scale read as clipped: a decimated stream's
@@ -1579,9 +1579,9 @@ class MTProcessingModule(BaseModule):
         try:
             run = self.begin_persisted_run("mt.process", "mt.process")
             # The workflow reads the recording where it is, with the options it
-            # was read with here. Saving the runs into the run instead took
-            # longer than the processing - most of a minute for a night of
-            # 24 kHz bursts, on the UI thread - and doubled the data on disk.
+            # was read with here. Saving the runs into the run instead would
+            # take longer than the processing, on the UI thread, and double
+            # the data on disk.
             parameters = self._processing_parameters()
             parameters["reader"] = dict(self._recording_options)
             if self._rates.currentData() is not None:

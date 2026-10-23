@@ -1,7 +1,7 @@
 """The colour limits of a plot, typed in: "Lock range" and a lower and upper value.
 
-Every colour-mapped view in the studio offers the same control, the one the
-Resistivity model view started with. Unticked, the plot scales itself to what
+Every colour-mapped view in the studio offers the same control, as the
+Resistivity model view does. Unticked, the plot scales itself to what
 it shows and the two boxes follow, so they always say what the colours mean;
 ticked, the plot keeps the limits in the boxes, which can then be typed in.
 Locking is what lets two surveys, time steps or lines be compared on one
@@ -115,7 +115,7 @@ class ColorRange(QWidget):
     def _write(self, lo: float, hi: float) -> None:
         span = abs(hi - lo)
         # Decimals enough for the values at hand - raw amplitudes of 1e-6
-        # showed as 0 at three - set before the values, which they round.
+        # would show as 0 at three - set before the values, which they round.
         if span > 0.0:
             needed = 3 - int(math.floor(math.log10(span)))
             decimals = min(max(self._decimals, needed), 12)

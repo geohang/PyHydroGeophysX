@@ -17,6 +17,7 @@ __all__ = [
     "load_2d_array",
     "load_xyz_table",
     "npy_shape",
+    "read_electrode_positions",
     "read_electrode_table",
     "table_header",
     "save_npy_atomic",
@@ -196,20 +197,40 @@ def read_electrode_table(path: PathLike) -> Tuple[np.ndarray, np.ndarray, str]:
 
     Returns ``(coords, elevation, how)``. ``coords`` holds the coordinate
     columns in the file's own order - ``(x, elevation)`` for a 2-D line,
-    ``(x, y, z)`` otherwise - which is what reading the table by position gave
+    ``(x, y, z)`` otherwise - which is what reading the table by position gives
     for a plain two- or three-column file. ``elevation`` is each electrode's
     height, and ``how`` says which columns were read.
 
     Vendors lay the table out several ways - ``X,Y,Z,Global ID``, a leading or
     trailing electrode number, plain ``x z`` - and reading columns by position
-    took an ID column as the elevation, or the electrode number as the position,
-    without a word. A header decides when there is one. Without one, an
+    would take an ID column as the elevation, or the electrode number as the
+    position, without a word. A header decides when there is one. Without one, an
     electrode-number column (1..n) is set aside, and a layout that still cannot
     be told apart is refused rather than guessed. The elevation is the column a
     header names as such; otherwise, of y and z, the one that varies: PyGIMLi
     writes a 2-D line with its elevation in y, and ``ert_io.electrode_elevation``
     reads a loaded survey by the same rule.
     """
+    return _electrode_columns(path)[:3]
+
+
+def read_electrode_positions(path: PathLike) -> Tuple[np.ndarray, bool, str]:
+    """``(positions, named, how)``: each electrode's x, y and z from a table.
+
+    ``positions`` is ``(n, 3)``. ``named`` is whether a header row named the y
+    and the z column, which makes them coordinates of a volume: a 3-D survey's
+    electrodes when they cover an area. Otherwise a table of x and the elevation
+    is a line along x at y = 0, and three unnamed columns are taken as x, y, z
+    in that order (PyGIMLi writes a line as x, elevation, 0).
+    """
+    coords, elevation, how, named = _electrode_columns(path)
+    if coords.shape[1] == 2:
+        coords = np.column_stack([coords[:, 0], np.zeros(len(coords)), elevation])
+    return np.asarray(coords[:, :3], dtype=float), bool(named), how
+
+
+def _electrode_columns(path: PathLike) -> Tuple[np.ndarray, np.ndarray, str, bool]:
+    """:func:`read_electrode_table`, and whether a header named y and z."""
     source = Path(path)
     if source.suffix.lower() in _ARRAY_SUFFIXES:
         table = load_xyz_table(source, min_cols=2)
@@ -238,7 +259,8 @@ def read_electrode_table(path: PathLike) -> Tuple[np.ndarray, np.ndarray, str]:
         height = z_col if z_col is not None else y_col
         picked = [x_col, y_col, z_col] if (y_col is not None and z_col is not None) else [x_col, height]
         return (table[:, picked].copy(), table[:, height].copy(),
-                f"x from '{header[x_col]}', elevation from '{header[height]}'")
+                f"x from '{header[x_col]}', elevation from '{header[height]}'",
+                len(picked) == 3)
 
     def numbering(col: int) -> bool:
         return rows >= 3 and np.array_equal(table[:, col], np.arange(1, rows + 1))
@@ -269,7 +291,7 @@ def read_electrode_table(path: PathLike) -> Tuple[np.ndarray, np.ndarray, str]:
     columns = [c + 1 for c in picked]
     how = ("x, elevation" if picked == [0, 1] else
            f"x from column {columns[0]}, elevation from column {columns[height]}")
-    return coords, coords[:, height].copy(), how
+    return coords, coords[:, height].copy(), how, False
 
 
 def write_csv(

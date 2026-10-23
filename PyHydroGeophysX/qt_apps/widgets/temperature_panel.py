@@ -671,8 +671,8 @@ def series_survey_times(summary: Optional[Mapping[str, Any]],
         except ValueError:
             dates = None
     if dates is None:
-        # A run saved before the timing was recorded still has its labels, and
-        # those are the dates the panels were headed with.
+        # A run saved without recorded timing falls back to its labels, which
+        # are the dates the panels were headed with.
         labels = summary.get("time_labels") or summary.get("step_titles")
         if isinstance(labels, (list, tuple)) and len(labels) == n_steps:
             parsed = [parse_timestamp(str(label)) for label in labels]
@@ -725,7 +725,7 @@ def run_correction(summary: Optional[Mapping[str, Any]], models: Any,
                    ) -> Tuple[Optional[np.ndarray], Optional[Dict[str, Any]]]:
     """``(inverted, report)``: a run's models as inverted, and any correction it made.
 
-    A run made while the correction was still chosen before the inversion
+    A run made with the correction chosen before the inversion
     corrected its own series: its ``final_models.npy`` is the corrected one, with
     the raw series saved beside it. Correcting that again would count the
     temperature twice, so a new correction has to start from the raw models.

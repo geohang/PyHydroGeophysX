@@ -1150,7 +1150,7 @@ class ModelViewerModule(BaseModule):
             seen_paths.add(key)
             artifacts.append(dict(item))
         registered = {str(item.get("path") or "") for item in artifacts}
-        # Reports are persisted in the result envelope, but older runs did not
+        # Reports are persisted in the result envelope, but a record may not
         # register them as artifacts. Recover that explicit reference on read.
         if record.result_path and self._store is not None:
             try:
@@ -1600,7 +1600,7 @@ class ModelViewerModule(BaseModule):
         """Correct the displayed series, or put the inverted models back.
 
         What the panel's Apply and Remove call, and callable without them - by
-        a test, or by a caller that already knows what it wants. The correction is
+        a script, or by a caller that already knows what it wants. The correction is
         the same code the ERT page uses, so a run reads the same on both pages.
 
         Returns ``(ok, message)``.

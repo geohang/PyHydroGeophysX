@@ -18,6 +18,11 @@ at them, so the model may jump there. The cell edges it stops at are drawn.
 
 The page puts its mesh settings above the zones (:meth:`set_settings_panel`),
 so the mesh is set up where it is shown.
+
+A 3-D mesh - imported, or built in the 3D Mesh Builder - is drawn in an
+interactive 3-D view instead: the inverted cells, coloured by region when there
+are several, the outer region on request, the electrodes, and a plane that cuts
+it open. The pieces it draws are made off the UI thread (:func:`volume_parts`).
 """
 
 from __future__ import annotations
@@ -26,7 +31,7 @@ import copy
 from typing import Any, Dict, List, Optional, Sequence
 
 import numpy as np
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QTimer, Qt, Signal
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QAbstractSpinBox,
@@ -39,6 +44,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QPushButton,
     QSplitter,
+    QStackedWidget,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -52,7 +58,7 @@ from PyHydroGeophysX.qt_apps.widgets import length_units
 from PyHydroGeophysX.qt_apps.widgets.readout import navigation_toolbar
 from PyHydroGeophysX.visualization.axis_units import set_section_axes, to_display_length
 
-__all__ = ["MeshPreviewView", "engine_zone_note"]
+__all__ = ["MeshPreviewView", "engine_zone_note", "volume_parts"]
 
 _OUTER_FACE = "#e5e5ea"
 _OUTER_EDGE = "#a3acb7"
@@ -102,6 +108,103 @@ def engine_zone_note(engine: str, time_lapse: bool, zones: Sequence[Dict[str, An
                 "starting model and are inverted like any other cell. Use the "
                 "in-house engine to keep them fixed." + cut, True)
     return f"{name} starts from the zone values and inverts every cell." + cut, False
+
+
+def volume_parts(mesh) -> Dict[str, Any]:
+    """What the 3-D view draws of a volume mesh, made off the UI thread.
+
+    The mesh as PyVista grids, split the way ``load_inversion_mesh`` reads its
+    markers: the inverted cells (marker above 1) and the outer region, with
+    the extent of each as ``(xmin, xmax, ymin, ymax, zmin, zmax)``. Raises when
+    PyVista is not installed.
+    """
+    from PyHydroGeophysX.visualization.pyvista_compat import pygimli_to_pyvista
+
+    grid = pygimli_to_pyvista(mesh)
+    markers = np.asarray(grid.cell_data["Marker"], dtype=int)
+    inverted = markers > 1
+    para = grid.extract_cells(np.flatnonzero(inverted)) if not inverted.all() else grid.copy()
+    outer = grid.extract_cells(np.flatnonzero(~inverted)) if (~inverted).any() else None
+    # Each inverted region by its place in the list, which the view colours
+    # by: markers need not run on from one another (E4D numbers its zones).
+    regions = np.unique(np.asarray(para.cell_data["Marker"], dtype=int))
+    para.cell_data["Region"] = np.searchsorted(regions, para.cell_data["Marker"])
+    return {"para_grid": para, "outer_grid": outer, "regions": regions.tolist(),
+            "para_bounds": tuple(float(v) for v in para.bounds),
+            "full_bounds": tuple(float(v) for v in grid.bounds)}
+
+
+class _VolumeView(QWidget):
+    """A volume mesh in 3-D: the inverted cells, the outer region on request,
+    the electrodes, and a plane that cuts the inverted cells open.
+
+    The camera stays where the user left it when only the drawing changes, and
+    is framed again on a new mesh or when the outer region comes and goes.
+    """
+
+    def __init__(self, pv, interactor, parent=None) -> None:
+        super().__init__(parent)
+        self._pv = pv
+        # Rendered when something changes, not on a timer (see the 3D Mesh Builder).
+        self._plotter = interactor(self, auto_update=False)
+        self._plotter.set_background("white")
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self._plotter.interactor)
+        self._shown: Optional[tuple] = None   # (para grid id, outer shown) on screen
+
+    def show_mesh(self, preview: Dict[str, Any], *, outer: bool, edges: bool,
+                  clip: bool) -> None:
+        from matplotlib.colors import ListedColormap
+
+        plotter, pv = self._plotter, self._pv
+        para, rest = preview["para_grid"], preview.get("outer_grid")
+        outer = bool(outer and rest is not None and rest.n_cells)
+        framing = (id(para), outer)
+        camera = plotter.camera_position if self._shown == framing else None
+        plotter.clear_plane_widgets()
+        plotter.clear()
+        if outer:
+            plotter.add_mesh(rest, color=_OUTER_FACE, opacity=0.25, show_edges=edges,
+                             edge_color=_OUTER_EDGE, line_width=0.5, reset_camera=False)
+        style: Dict[str, Any] = dict(show_edges=edges, edge_color=_PARA_EDGE,
+                                     line_width=0.5, reset_camera=False)
+        regions = list(preview.get("regions") or [])
+        if len(regions) > 1:
+            # Several regions - E4D's zones, decoupled zones - each its own
+            # colour, labelled with its marker in the middle of its band.
+            count = len(regions)
+            style.update(scalars="Region", cmap=ListedColormap(zone_colors(count)),
+                         n_colors=count, clim=[-0.5, count - 0.5],
+                         annotations={index: str(marker) for index, marker in enumerate(regions)},
+                         scalar_bar_args={"title": "Region", "n_labels": 0})
+        else:
+            style.update(color="white", show_scalar_bar=False)
+        if clip:
+            plotter.add_mesh_clip_plane(para, normal="-y", **style)
+        else:
+            plotter.add_mesh(para, **style)
+        sensors = np.asarray(preview.get("sensors", np.zeros((0, 3))), dtype=float)
+        if sensors.ndim == 2 and sensors.shape[1] == 3 and len(sensors):
+            plotter.add_mesh(pv.PolyData(sensors), color=_ELECTRODE, point_size=9,
+                             render_points_as_spheres=True, reset_camera=False)
+        plotter.add_axes()
+        if camera is None:
+            plotter.reset_camera(bounds=preview["full_bounds" if outer else "para_bounds"])
+        else:
+            plotter.camera_position = camera
+        self._shown = framing
+        plotter.render()
+
+    def reset_view(self) -> None:
+        self._shown = None
+        self._plotter.reset_camera()
+        self._plotter.render()
+
+    def showEvent(self, event) -> None:  # noqa: N802 - Qt override
+        """Repaint once on screen: a VTK view in a stack keeps stale pixels."""
+        super().showEvent(event)
+        QTimer.singleShot(0, self._plotter.render)
 
 
 class MeshPreviewView(QWidget):
@@ -162,21 +265,42 @@ class MeshPreviewView(QWidget):
             "Build the mesh again from the current data and mesh settings. It is "
             "rebuilt on its own when this tab is opened after they change.")
         self._rebuild.clicked.connect(self.rebuildRequested.emit)
+        # The 3-D view's own tools, in place of the plot toolbar.
+        self._clip = QCheckBox("Cut open")
+        self._clip.setToolTip(
+            "Cut the inverted cells with a plane to see inside: drag the plane, or "
+            "its arrow to turn it.")
+        self._clip.toggled.connect(self._redraw)
+        self._reset_3d = QPushButton("Reset view")
+        self._reset_3d.setIcon(theme.icon("fa5s.expand"))
+        self._reset_3d.clicked.connect(lambda: self._volume and self._volume.reset_view())
+        self._volume: Optional[_VolumeView] = None   # built with the first volume
+        self._volume_error = ""
 
         bar = QHBoxLayout()
         bar.setContentsMargins(0, 0, 0, 0)
         bar.addWidget(self._toolbar)
         bar.addWidget(self._coords, stretch=1)
+        bar.addWidget(self._reset_3d)
+        bar.addStretch(1)
         bar.addWidget(self._show_outer)
         bar.addWidget(self._show_edges)
+        bar.addWidget(self._clip)
         bar.addWidget(self._rebuild)
+        self._3d_tools = (self._reset_3d, self._clip)
+        for widget in self._3d_tools:
+            widget.setVisible(False)
 
         self._info = QLabel()
         self._info.setWordWrap(True)
         self._info.setStyleSheet(f"color:{theme.PALETTE['muted']}; font-size:8pt;")
 
+        # The section plot, or the 3-D view of a volume mesh.
+        self._views = QStackedWidget()
+        self._views.addWidget(self._canvas)
+
         splitter = QSplitter(Qt.Horizontal)
-        splitter.addWidget(self._canvas)
+        splitter.addWidget(self._views)
         splitter.addWidget(self._build_side_panel())
         splitter.setCollapsible(0, False)
         splitter.setStretchFactor(0, 1)
@@ -253,6 +377,13 @@ class MeshPreviewView(QWidget):
         self._draw_hint.setStyleSheet(f"color:{theme.PALETTE['accent']};")
         self._draw_hint.setVisible(False)
         layout.addWidget(self._draw_hint)
+        self._zone_3d_note = QLabel(
+            "Zones are drawn on a 2-D mesh. In a 3-D mesh they are boxes, set in the "
+            "3D Mesh Builder before the mesh is built.")
+        self._zone_3d_note.setWordWrap(True)
+        self._zone_3d_note.setStyleSheet(f"color:{theme.PALETTE['muted']};")
+        self._zone_3d_note.setVisible(False)
+        layout.addWidget(self._zone_3d_note)
 
         self._table = QTableWidget(0, 4)
         self._table.setHorizontalHeaderLabels(["Zone", "ρ (Ω·m)", "Fixed", "Cells"])
@@ -273,12 +404,12 @@ class MeshPreviewView(QWidget):
         layout.addWidget(self._table, stretch=1)
 
         # What the zones do to the mesh and to the regularization, beyond their
-        # values. Both are off by default: a run with zones then does exactly
-        # what it did before these existed.
+        # values. Both are off by default, so zones act through their values
+        # alone.
         self._conform = QCheckBox("Mesh follows the zones")
         self._conform.setToolTip(
-            "Build the mesh again so that the zone outlines become cell edges, "
-            "the way E4D meshes its internal boundaries: no cell straddles an "
+            "Build the mesh again so that the zone outlines become cell edges: "
+            "no cell straddles an "
             "outline, so a zone's value - and a fixed zone - covers exactly the "
             "area drawn. The mesh is rebuilt after every zone you draw, move or "
             "remove; changing a zone's value leaves the mesh alone. Only the parts "
@@ -419,6 +550,16 @@ class MeshPreviewView(QWidget):
             fxmin, fxmax, fzmin, fzmax = preview["full_extent"]
             parts.append(f"whole mesh {to_display_length(fxmax - fxmin):.0f} × "
                          f"{to_display_length(fzmax - fzmin):.0f} {unit}")
+        elif preview.get("para_bounds") is not None:
+            # A volume: length × width × depth of each part.
+            unit = length_units.current()
+
+            def size(bounds, digits: str) -> str:
+                spans = (bounds[1] - bounds[0], bounds[3] - bounds[2], bounds[5] - bounds[4])
+                return " × ".join(f"{to_display_length(span):{digits}}" for span in spans)
+
+            parts.append(f"inverted region {size(preview['para_bounds'], '.3g')} {unit}")
+            parts.append(f"whole mesh {size(preview['full_bounds'], '.0f')} {unit}")
         edges = int((preview.get("build") or {}).get("zone_outline_edges", 0))
         if edges:
             parts.append(f"follows the zones ({edges} outline segments)")
@@ -427,6 +568,24 @@ class MeshPreviewView(QWidget):
         if self._source:
             parts.append(self._source)
         return " · ".join(parts)
+
+    def _volume_view(self) -> Optional[_VolumeView]:
+        """The 3-D view, built the first time a volume is shown; None where
+        PyVista is missing or the platform has no screen (offscreen tests)."""
+        if self._volume is None and not self._volume_error:
+            from PyHydroGeophysX.visualization.pyvista_compat import try_import_pyvista
+
+            ok, pv, interactor, error = try_import_pyvista()
+            if not ok:
+                self._volume_error = error or "PyVista is not installed"
+                return None
+            try:
+                self._volume = _VolumeView(pv, interactor, self)
+            except Exception as exc:  # noqa: BLE001 - no OpenGL: the counts still show
+                self._volume_error = str(exc)
+                return None
+            self._views.addWidget(self._volume)
+        return self._volume
 
     def _para_areas(self) -> np.ndarray:
         """Area of every inverted cell, by the shoelace formula."""
@@ -449,16 +608,32 @@ class MeshPreviewView(QWidget):
 
         if self._selector is not None:
             return  # a redraw would wipe the polygon being drawn
-        ax = self._ax
-        ax.clear()
         preview = self._preview
         self._info.setText(self._summary())
+        volume = self._volume_view() if preview and preview.get("para_grid") is not None else None
+        self._views.setCurrentIndex(1 if volume is not None else 0)
+        for widget in (self._toolbar, self._coords):
+            widget.setVisible(volume is None)
+        for widget in self._3d_tools:
+            widget.setVisible(volume is not None)
+        if volume is not None:
+            try:
+                volume.show_mesh(preview, outer=self._show_outer.isChecked(),
+                                 edges=self._show_edges.isChecked(),
+                                 clip=self._clip.isChecked())
+            except Exception as exc:  # noqa: BLE001 - said under the view
+                self._info.setText(f"The 3-D view could not draw this mesh: {exc}")
+            return
+        ax = self._ax
+        ax.clear()
         if not preview or preview.get("dim") != 2:
             text = self._message
             if preview:
+                why = preview.get("grid_error") or self._volume_error
                 text = (f"{preview['dim']}-D mesh: {preview['cells']} cells, "
-                        f"{preview['para_cells']} inverted. The preview draws 2-D "
-                        "meshes only, and zones apply to 2-D meshes.")
+                        f"{preview['para_cells']} inverted. "
+                        + (f"The 3-D view is unavailable ({why}). " if why else "")
+                        + "Zones are drawn on 2-D meshes.")
             ax.set_axis_off()
             ax.text(0.5, 0.5, text, ha="center", va="center", wrap=True,
                     color=theme.PALETTE["muted"], transform=ax.transAxes)
@@ -681,6 +856,7 @@ class MeshPreviewView(QWidget):
     def _sync_zone_controls(self) -> None:
         drawable = bool(self._preview) and self._preview.get("dim") == 2
         self._draw_btn.setEnabled(drawable)
+        self._zone_3d_note.setVisible(bool(self._preview) and self._preview.get("dim") == 3)
         self._remove_btn.setEnabled(bool(self._zones))
         self._clear_btn.setEnabled(bool(self._zones))
 

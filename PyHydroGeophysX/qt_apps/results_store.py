@@ -54,8 +54,7 @@ _AUTO_DISCOVER_FORMATS = {
 }
 #: Output folders of working copies rather than results: the time-lapse run
 #: rewrites every survey into ``normalized/`` before inverting it. Listing them
-#: buried the results, and a 420-survey run was recorded with the warning that
-#: 220 output files were not listed - all of them those copies.
+#: would bury the results and use up the discovery limit on those copies.
 _INTERMEDIATE_DIRS = {"normalized"}
 
 _SUCCESS = {"ok", "success", "saved", "completed", "complete", "succeeded"}
@@ -628,7 +627,7 @@ class ResultsStore:
         except OSError as exc:
             # A delete refused part way has already removed what it reached, so
             # the run can no longer be saved as it ran. Left staged, a later Save
-            # put a run whose files were gone into the history.
+            # would put a run whose files are gone into the history.
             self._unsaved.pop(key, None)
             self._unsaved_payloads.pop(key, None)
             raise OSError(f"{exc} The run itself is discarded; what is left of its "
@@ -681,10 +680,10 @@ class ResultsStore:
     def recover_run(self, run_dir: Path) -> RunRecord:
         """Put an abandoned run that finished back among the unsaved runs.
 
-        Unsaved runs are held in memory, so a crash or a forced quit lost every
-        finished run not yet saved, though its folder kept the recipe, the
+        Unsaved runs are held in memory, so a crash or a forced quit loses every
+        finished run not yet saved, though its folder keeps the recipe, the
         result and the outputs. The record is rebuilt from those, as
-        :meth:`finish_run` built it from the result when the run ended, and the
+        :meth:`finish_run` builds it from the result when the run ends, and the
         user saves or discards it as any other unsaved run.
         """
         if self.read_only:
@@ -949,9 +948,9 @@ class ResultsStore:
             return resolved
         except ValueError:
             pass
-        # A record from before paths were kept run-relative, in a Project that
-        # has since been moved or renamed: the file is still in this run's
-        # folder, under its new location.
+        # A record that holds an absolute path rather than a run-relative one,
+        # in a Project that has been moved or renamed: the file is still in this
+        # run's folder, under its new location.
         rebased = _rebased_into(str(value), base)
         if rebased is not None:
             return rebased

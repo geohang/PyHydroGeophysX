@@ -13,8 +13,7 @@ in a dict the studio state owns (``StudioState.colormap_settings``). Every view
 of that quantity reads the same entry, so the ERT page and a result reopened in
 Saved Results show a section in the same colours, and a change made on either
 page is what the other shows. Nothing is stored until the user picks, and a view
-with no stored choice draws exactly what it drew before this chooser existed:
-each view passes its own former colormap as the default.
+with no stored choice draws its own default colormap, which each view passes in.
 
 The helpers below turn a chosen name into what each plotting library takes -
 matplotlib and PyGIMLi (a colormap name, or a Colormap object for the custom
@@ -272,10 +271,10 @@ def lookup_table(name: str, n: int = 256) -> np.ndarray:
 def apply_to_histogram(histogram: Any, name: str, *, preset: Optional[str] = None) -> None:
     """Colour a pyqtgraph ``HistogramLUTItem`` (and the image it drives).
 
-    ``preset`` is the gradient preset the view used before this chooser: loaded
-    as such, it looks exactly as it did, ticks and all. Any other map is set in
-    full and its ticks hidden, as pyqtgraph's own colormap menu does - a 256-stop
-    map would otherwise stripe the gradient bar with 256 handles.
+    ``preset`` names a pyqtgraph gradient preset: it is loaded as such, with its
+    ticks shown. Any other map is set in full and its ticks hidden, as
+    pyqtgraph's own colormap menu does - a 256-stop map would otherwise stripe
+    the gradient bar with 256 handles.
     """
     gradient = histogram.gradient
     if preset:

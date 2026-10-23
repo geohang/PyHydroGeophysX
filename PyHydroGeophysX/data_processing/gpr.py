@@ -8,8 +8,9 @@ takes a profile and returns a new one, with the step written into its
 (``qt_apps/modules/gpr_processing.py``).
 
 The steps and their usual order follow the open-source GPR codes - GPRPy
-(Plattner, 2020), readgssi (Nesbitt et al.), ImpDAR (Lilien et al., 2020) and
-RGPR (Huber and Hans, 2018) - and are written here from their descriptions:
+(Plattner, 2020), readgssi (Nesbitt et al., 2018), ImpDAR (Lilien et al., 2020)
+and RGPR (Huber and Hans, 2018) - and are written here from their
+descriptions:
 
 1. :func:`dewow` - remove the slow drift ("wow") each trace starts with;
 2. :func:`set_time_zero` - put time zero on the first arrival;
@@ -315,6 +316,10 @@ def set_time_zero(profile: GPRProfile, time_ns: Optional[float] = None, *,
     RGPR do; without it they stay at negative times. When the antenna
     separation is known the zero is put that much earlier than the first
     break, which is the direct air wave that crossed it.
+
+    A record cut at time zero starts partway through the direct wave, and a
+    band-pass run on it afterwards rings on that edge; :func:`process` drops
+    the samples only after its band-pass.
     """
     if time_ns is None:
         picked = pick_time_zero(profile, threshold)
@@ -341,7 +346,14 @@ def set_time_zero(profile: GPRProfile, time_ns: Optional[float] = None, *,
 
 
 def bandpass(profile: GPRProfile, low_mhz: float, high_mhz: float, order: int = 4) -> GPRProfile:
-    """Zero-phase Butterworth band-pass between ``low_mhz`` and ``high_mhz``."""
+    """Zero-phase Butterworth band-pass between ``low_mhz`` and ``high_mhz``.
+
+    The filter runs forward and back over each trace, padded by reflecting
+    it about its first and last samples. A trace that starts on a large
+    value - one cut at time zero, partway through the direct wave - so
+    begins with a step, and the low corner rings on it for a few of its
+    periods. Band-pass before cutting at time zero, as :func:`process` does.
+    """
     from scipy.signal import butter, sosfiltfilt
 
     nyquist = 0.5 * profile.sampling_mhz
@@ -412,7 +424,16 @@ def migrate(profile: GPRProfile, velocity: float) -> GPRProfile:
     vertical wavenumber of the exploding-reflector field at velocity ``v/2``,
     and transformed back. Assumes evenly spaced traces (the median spacing is
     used) and time zero at the surface; the samples before time zero are
-    left as they are.
+    left as they are, and the sample at time zero comes out zero.
+
+    The time axis goes through a sine transform: the section is extended to
+    negative times as the negative of itself, not with zeros. The mapping
+    sends no energy to zero frequency, so it drops each trace's mean. Padded
+    with zeros, a trace whose first samples cut through a strong arrival (time
+    zero set on the direct wave's peak, say) would have a mean, and dropping it
+    would leave a constant offset down the trace. The odd extension has no
+    mean, and what it adds before time zero migrates to negative times, which
+    are not kept.
     """
     v = float(velocity)
     if not v > 0.0:
@@ -446,30 +467,65 @@ def migrate(profile: GPRProfile, velocity: float) -> GPRProfile:
 def _stolt(section: np.ndarray, dt: float, dx: float, ve: float) -> np.ndarray:
     """Stolt migration of ``section`` (time zero in its first row) at velocity ``ve``.
 
-    ``ve`` is the exploding-reflector velocity, half the radar velocity. Both
-    axes are padded by half and more, to the next power of two, so the
-    transform's wrap-around falls in the padding.
+    ``ve`` is the exploding-reflector velocity, half the radar velocity. Time
+    goes through a sine transform (DST-I), which extends the section to
+    negative times as the negative of itself (see :func:`migrate`); distance
+    through a real FFT. Both axes are padded by half and more: the distance
+    axis so the transform's wrap-around falls in the padding, the time axis
+    so the record fills at most a third of the transform's period. The
+    spectrum is then read between frequency samples with a 10-tap
+    Kaiser-windowed sinc; linear interpolation would attenuate dipping energy
+    late in the record.
     """
+    from scipy.fft import dst, idst, irfft, rfft
+    from scipy.special import i0
+
     nt, nx = section.shape
-    nt_pad = int(2 ** np.ceil(np.log2(max(1.5 * nt, 8))))
+    # DST-I of n rows holds the rows after time zero, time zero itself being
+    # the odd extension's centre; n + 1 a power of two keeps it fast.
+    n = int(2 ** np.ceil(np.log2(max(1.5 * nt, 8)))) - 1
     nx_pad = int(2 ** np.ceil(np.log2(max(1.5 * nx, 8))))
-    spectrum = np.fft.fft2(section, s=(nt_pad, nx_pad))
-    f = np.fft.fftfreq(nt_pad, d=dt)                     # cycles/ns
-    kx = np.fft.fftfreq(nx_pad, d=dx)                    # cycles/m
-    order = np.argsort(f)
-    f_sorted = f[order]
-    migrated = np.zeros_like(spectrum)
-    for j, k in enumerate(kx):
-        # The output frequency f_tau stands for kz = f_tau / ve; its energy
-        # was recorded at f = sign(f_tau) sqrt(f_tau^2 + (ve kx)^2).
-        f_in = np.sign(f) * np.sqrt(f ** 2 + (ve * k) ** 2)
-        column = spectrum[order, j]
-        real = np.interp(f_in, f_sorted, column.real, left=0.0, right=0.0)
-        imag = np.interp(f_in, f_sorted, column.imag, left=0.0, right=0.0)
-        with np.errstate(divide="ignore", invalid="ignore"):
-            scale = np.where(f_in != 0.0, np.abs(f) / np.abs(f_in), 0.0)
-        migrated[:, j] = (real + 1j * imag) * scale
-    return np.real(np.fft.ifft2(migrated))[:nt, :nx]
+    rows = np.zeros((n, nx))
+    rows[:nt - 1] = section[1:]
+    taps, beta, phases = 10, 5.1, 2048
+    half = taps // 2
+    # One row per wavenumber, frequency sample k (k / (2 (n + 1) dt)) in column
+    # k + half. The spectrum is odd about sample 0 and about sample n + 1
+    # (Nyquist), and the interpolator reads past both.
+    width = n + 2 + taps
+    padded = np.zeros((nx_pad // 2 + 1, width), dtype=complex)
+    padded[:, half + 1:half + 1 + n] = rfft(dst(rows, type=1, axis=0), n=nx_pad, axis=1).T
+    padded[:, :half] = -padded[:, taps:half:-1]
+    padded[:, half + n + 2:] = -padded[:, half + n:n:-1]
+    flat = padded.ravel()
+    # weights[t, p] weighs the sample t - half + 1 places above the sample
+    # below the point read, for a point p / phases of a sample above that one.
+    d = np.arange(phases + 1)[None, :] / phases - np.arange(1 - half, half + 1)[:, None]
+    weights = np.sinc(d) * i0(beta * np.sqrt(np.clip(1.0 - (d / half) ** 2, 0.0, None))) / i0(beta)
+    # The output frequency f_tau stands for kz = f_tau / ve; its energy was
+    # recorded at f = sqrt(f_tau^2 + (ve kx)^2). In samples, at hypot(k, c).
+    k = np.arange(1, n + 1, dtype=float)
+    c = 2.0 * (n + 1) * dt * ve * np.fft.rfftfreq(nx_pad, d=dx)
+    migrated = np.empty((n, c.size), dtype=complex)
+    step = max(1, 16384 // n)               # wavenumbers at a time, small enough to stay in cache
+    for j0 in range(0, c.size, step):
+        j1 = min(c.size, j0 + step)
+        pos = np.hypot(k[:, None], c[None, j0:j1])
+        beyond = pos > n + 1                # recorded above Nyquist: nothing there
+        np.minimum(pos, n + 1, out=pos)
+        base = pos.astype(np.intp)
+        phase = np.rint((pos - base) * phases).astype(np.intp)
+        base += np.arange(j0, j1) * width + 1   # flat index of the first tap
+        value = np.take(flat, base) * np.take(weights[0], phase)
+        for t in range(1, taps):
+            base += 1
+            value += np.take(flat, base) * np.take(weights[t], phase)
+        value[beyond] = 0.0
+        migrated[:, j0:j1] = value * (k[:, None] / pos)
+    image = idst(irfft(migrated, n=nx_pad, axis=1)[:, :nx], type=1, axis=0)
+    out = np.zeros_like(section)
+    out[1:] = image[:nt - 1]
+    return out
 
 
 def crop_time(profile: GPRProfile, max_time_ns: float) -> GPRProfile:
@@ -489,6 +545,13 @@ def process(profile: GPRProfile, steps: Iterable[Mapping[str, Any]]) -> GPRProfi
     order is the standard one whatever order the list is in, so a recipe
     cannot gain the traces before removing their background.
 
+    When time zero drops the samples before it and a band-pass follows, the
+    samples are dropped after the band-pass: cut first, each trace would
+    start partway through the direct wave, and the filter would ring on that
+    edge for tens of nanoseconds (see :func:`bandpass`). Time zero is still
+    picked on the record as the earlier steps leave it, and the line comes
+    out the same length.
+
     Examples
     --------
     >>> recipe = [{"name": "gain", "kind": "agc", "window_ns": 20},
@@ -497,21 +560,43 @@ def process(profile: GPRProfile, steps: Iterable[Mapping[str, Any]]) -> GPRProfi
     ['dewow', 'time_zero', 'gain']
     """
     out = profile
-    for step in sorted_steps(steps):
+    recipe = sorted_steps(steps)
+    band_passed = any(step["name"] == "bandpass" for step in recipe)
+    cut_later = False
+    for step in recipe:
         kwargs = {k: v for k, v in step.items() if k not in ("name", "enabled")}
         name = step["name"]
         if name == "dewow":
             out = dewow(out, **kwargs)
         elif name == "time_zero":
-            out = set_time_zero(out, **kwargs)
+            crop = bool(kwargs.pop("crop", True))
+            cut_later = crop and band_passed
+            out = set_time_zero(out, crop=crop and not cut_later, **kwargs)
         elif name == "bandpass":
             out = bandpass(out, **kwargs)
+            if cut_later:
+                out = _cut_at_time_zero(out)
         elif name == "background":
             out = remove_background(out, **kwargs)
         elif name == "migrate":
             out = migrate(out, **kwargs)
         elif name == "gain":
             out = gain(out, **kwargs)
+    return out
+
+
+def _cut_at_time_zero(profile: GPRProfile) -> GPRProfile:
+    """Drop the samples before time zero, which a band-pass has just filtered.
+
+    The rows kept are the ones :func:`set_time_zero` keeps with ``crop``; the
+    band-pass line of the history says the cut came after it.
+    """
+    keep = profile.time_ns >= -0.5 * profile.dt_ns
+    if not np.any(keep):
+        raise ValueError(f"Time zero is {-profile.time_ns[-1]:.3g} ns after the last sample.")
+    first = int(np.argmax(keep))
+    out = profile.with_data(profile.data[first:], t_start_ns=float(profile.time_ns[first]))
+    out.history[-1] += ", then the samples before time zero dropped"
     return out
 
 
@@ -692,7 +777,8 @@ def example_profile(data_dir: PathLike, *, trace_spacing: float = 0.25,
 # Reading and saving
 # ---------------------------------------------------------------------------
 
-#: GSSI antenna model numbers and their centre frequencies, MHz.
+#: GSSI antenna model numbers and their centre frequencies, MHz, as tabulated in
+#: readgssi (Nesbitt et al., 2018).
 _GSSI_ANTENNAS = {
     "3207": 100, "5106": 200, "50270": 270, "50300": 300, "350": 350, "5103": 400,
     "50400": 400, "3102": 500, "3101": 900, "51600": 1600, "4105": 2000, "42000": 2000,

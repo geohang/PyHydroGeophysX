@@ -4,7 +4,7 @@ A view that redraws on every signal redraws as often as the signals come: a
 slider dragged across ten depths rebuilds its figure ten times, and a caller
 setting the colour range and then the data rebuilds it twice. ``draw_idle``
 does not help there - it merges only the final paint, while the interpolation,
-the statistics and the rebuilt artists before it ran once per signal. Asking
+the statistics and the rebuilt artists before it run once per signal. Asking
 through a :class:`Coalesced` instead runs the work once, after the events that
 asked for it have all been handled.
 """

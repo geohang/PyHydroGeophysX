@@ -24,9 +24,9 @@ FIGURE_SUFFIXES = (".png", ".jpg", ".jpeg", ".svg")
 
 #: Scaled figure thumbnails, newest use last, keyed by (path, mtime, size,
 #: height). A run's figures are saved at print resolution - five to six thousand
-#: pixels across - and the activity strip rebuilt every thumbnail whenever its
-#: figure list changed, decoding each full-size file again to show it 96 px
-#: high: about 135 ms of UI-thread time per new figure with four on the strip.
+#: pixels across - and decoding a full-size file to show it 96 px high costs
+#: UI-thread time, so the activity strip decodes each figure once and reuses
+#: the thumbnail whenever its figure list changes.
 _THUMBNAILS: "OrderedDict[Tuple[str, int, int, int], QPixmap]" = OrderedDict()
 #: Enough for several runs' strips; one entry is at most a few hundred KB.
 _THUMBNAIL_LIMIT = 32
@@ -123,8 +123,8 @@ class RunActivity(QFrame):
     The studio's modules are interactive tools holding their own state, while an
     automatic workflow runs headless in its own process and writes into a run
     directory. So bringing a module to the front while the run works there
-    showed an *empty* tool - "No files added", "No data loaded" - which reads as
-    nothing having happened, which is worse than not navigating at all.
+    would show an *empty* tool - "No files added", "No data loaded" - which reads
+    as nothing having happened, which is worse than not navigating at all.
 
     This says plainly which step is running here, and shows the figures the run
     has just written so the work is visible as it happens. It is an overlay
@@ -161,8 +161,8 @@ class RunActivity(QFrame):
         self._note.setWordWrap(True)
         layout.addWidget(self._note)
         # A container widget rather than a bare nested layout: a QVBoxLayout's
-        # heightForWidth does not account for a child layout, so the strip was
-        # measured as though it held nothing and the figures were clipped away.
+        # heightForWidth does not account for a child layout, so the strip would
+        # be measured as though it held nothing and the figures clipped away.
         self._strip_host = QWidget()
         self._strip_host.setObjectName("runStrip")
         self._strip = QHBoxLayout(self._strip_host)
@@ -209,11 +209,11 @@ class RunActivity(QFrame):
     def _reposition(self) -> None:
         """Span the page's width, using only the height that needs.
 
-        Asked for ``sizeHint()`` directly a word-wrapped label answers for a
-        width nobody has set yet, and the strip came out several hundred pixels
-        tall - it covered the panel it was supposed to annotate. The height is
-        taken for the width it will actually have, and capped, because this sits
-        on top of somebody's controls.
+        Asked for ``sizeHint()`` directly, a word-wrapped label answers for a
+        width nobody has set yet, and the strip comes out several hundred pixels
+        tall - it would cover the panel it annotates. The height is taken for
+        the width it will actually have, and capped, because this sits on top
+        of the page's controls.
         """
         parent = self.parentWidget()
         if parent is None:
@@ -222,8 +222,8 @@ class RunActivity(QFrame):
         layout = self.layout()
         if layout is not None:
             # Thumbnails added a moment ago are not in the layout's measurements
-            # until it is activated, and the strip then came out as tall as an
-            # empty one with the figures clipped away.
+            # until it is activated; without that the strip is as tall as an
+            # empty one and the figures are clipped away.
             layout.activate()
         if layout is not None and layout.hasHeightForWidth():
             height = layout.heightForWidth(width)
@@ -435,6 +435,11 @@ class BaseModule(QWidget):
     viewMeshRequested = Signal(str)
     #: Ask the main window to switch to another module by key (cross-module handoff).
     navigateRequested = Signal(str)
+    #: Ask the main window to open another module and apply one of its
+    #: ``agent_apply`` actions there: ``(module key, action, args)``. How a page
+    #: hands its work to another, such as the ERT page's electrodes to the 3D
+    #: Mesh Builder and the mesh built there back.
+    handoffRequested = Signal(str, str, object)
     #: What the page is busy with changed: the new :meth:`activity`, "" once idle.
     activityChanged = Signal(str)
     module_key = "base"
@@ -489,9 +494,9 @@ class BaseModule(QWidget):
     def show_run_inputs(self, inputs: Dict[str, Any]) -> str:
         """Load the automatic run's data into this panel, for display only.
 
-        A strip saying what is happening was not enough: the panel underneath
-        still read "No files added" and "No data loaded", with an empty plot,
-        so there was nothing to actually look at. The run's inputs are ordinary
+        A strip saying what is happening is not enough: the panel underneath
+        would still read "No files added" and "No data loaded", with an empty
+        plot, leaving nothing to look at. The run's inputs are ordinary
         files this module can already open, so the page opens them and plots
         them while the workflow gets on with its own copy in its own process.
 
@@ -559,9 +564,9 @@ class BaseModule(QWidget):
     def export_actions(self) -> List[ExportAction]:
         """What ``File > Export Results…`` should offer while this page is open.
 
-        Every module writes its own products in its own formats, and before this
-        hook the only way to reach them was to know which button on which tab
-        did it. A module returns the exports that make sense *right now* — an
+        Every module writes its own products in its own formats; this hook
+        saves the user from having to know which button on which tab writes
+        which. A module returns the exports that make sense *right now* — an
         entry it leaves out is one there is no result for yet — and the window
         runs the single offer directly or asks when there is more than one.
         """
@@ -642,8 +647,8 @@ class BaseModule(QWidget):
         """Keep every line this page logs for the run in its ``logs/run_log.txt``.
 
         The Log window holds its last two thousand lines and is gone with the
-        session, and the long runs - a 420-survey time-lapse prints thousands -
-        are the ones reviewed afterwards. So the page's lines also go to the run
+        session, and the long runs - a long time-lapse prints thousands of
+        lines - are the ones reviewed afterwards. So the page's lines also go to the run
         folder, in order and as displayed: what was logged while the run was
         prepared in the same turn, before its folder existed; everything the
         workflow process printed; and the summary the page writes once the
@@ -677,9 +682,8 @@ class BaseModule(QWidget):
     def _write_run_settings(self, handle: Any, closed: bool = False) -> None:
         """Keep ``run_settings.txt``: the run's recipe as text, for its Run records.
 
-        Only the ERT page wrote a settings file a person could read; every other
-        page's run kept its settings in the recipe's JSON alone. This one is
-        written from that recipe for every page that writes none of its own
+        The ERT page writes a readable settings file of its own; for every page
+        that writes none, this one is written from the recipe's JSON
         (``run_records.write_recipe_settings``), and again with the outcome once
         the run has closed. It is a record, never a reason to stop a run.
         """
@@ -773,9 +777,9 @@ class BaseModule(QWidget):
 
         A workflow reports its own warnings in its result, and few do; what the
         page warned about - an engine that fell back, zones not applied,
-        surveys without times - went only to the Log window, and Saved Results
-        showed the run as clean. The run has closed by now, so its record is
-        final; a run already saved has its record written again.
+        surveys without times - would reach only the Log window, and Saved
+        Results would show the run as clean. The run has closed by now, so its
+        record is final; a run already saved has its record written again.
         """
         record = getattr(handle, "record", None)
         if record is None or not warnings:

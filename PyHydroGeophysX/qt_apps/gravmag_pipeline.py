@@ -20,7 +20,7 @@ from PyHydroGeophysX.workflows.gravmag import (
 
 warn_legacy_path("qt_apps.gravmag_pipeline", "workflows.gravmag")
 
-# 0.3.0's module imported this helper module, so scripts could reach it here.
+# Kept importable from here: the 0.3.0 module exposed this helper module.
 from PyHydroGeophysX.qt_apps import io_utils  # noqa: E402,F401
 
 __all__ = [

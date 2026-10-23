@@ -94,10 +94,10 @@ def export_to_vtk(
 
     n_points = points.shape[0]
     if values.size != n_points:
-        # Resampling by index used to paper over this: it painted each value onto
-        # whichever cell shared its rank, so the file looked valid and showed a
-        # model that was never estimated. A count mismatch means the wrong mesh
-        # (e.g. the full mesh for a model on the inversion's parameter mesh).
+        # A count mismatch means the wrong mesh (e.g. the full mesh for a model
+        # on the inversion's parameter mesh). Resampling by index would paint
+        # each value onto whichever cell shares its rank, so the file would look
+        # valid and show a model that was never estimated.
         raise ValueError(
             f"The result holds {values.size} model values but the mesh has "
             f"{n_points} cells; pass the mesh the model was estimated on.")
