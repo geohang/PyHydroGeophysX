@@ -41,6 +41,8 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 
+from PyHydroGeophysX._internal.simpeg_compat import cg_keywords
+
 from .transfer_function import TransferFunction
 
 _AIR_CONDUCTIVITY = 1e-8
@@ -351,7 +353,8 @@ def invert_profile(tfs: Sequence[TransferFunction], station_x: Sequence[float], 
     reg = regularization.WeightedLeastSquares(
         profile.mesh, active_cells=profile.active, alpha_s=alpha_s,
         reference_model=np.full(n_active, -np.log(starting_resistivity)))
-    opt = optimization.InexactGaussNewton(maxIter=max_iterations, maxIterCG=30, tolCG=1e-3)
+    opt = optimization.InexactGaussNewton(
+        maxIter=max_iterations, **cg_keywords(optimization.InexactGaussNewton, maxiter=30, rtol=1e-3))
     problem = inverse_problem.BaseInvProblem(dmis, reg, opt)
     history: List[Dict[str, float]] = []
 

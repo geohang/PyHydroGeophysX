@@ -3409,3 +3409,30 @@ def test_srt_pygimli_pipeline_applies_requested_regularization(tmp_path, monkeyp
     assert result["mgr"].used["lam"] == result["lambda_used"] == 73.
     assert result["mgr"].used["maxIter"] == 7
     assert result["mgr"].used["mesh"] is mesh
+
+
+def test_the_simpeg_optimizers_and_output_directives_are_built_with_the_installed_release_keywords():
+    """SimPEG 0.25 renamed the Gauss-Newton CG options (maxIterCG -> cg_maxiter,
+    tolCG -> cg_rtol) and the output directives' in-memory switch (save_txt ->
+    on_disk); 0.26 removed the old names. Within the declared simpeg>=0.24,<1.0
+    a fresh install of 0.26 made the gravity/magnetics, FDEM/TDEM and MT 2-D
+    inversions raise before their first iteration."""
+    from PyHydroGeophysX._internal.simpeg_compat import cg_keywords, in_memory_output
+
+    class New:
+        def __init__(self, *, cg_maxiter=5, cg_rtol=1e-3, **kwargs):
+            pass
+
+    class Old:
+        def __init__(self, **kwargs):
+            pass
+
+    assert cg_keywords(New, maxiter=20, rtol=1e-3) == {"cg_maxiter": 20, "cg_rtol": 1e-3}
+    assert cg_keywords(Old, maxiter=20, rtol=1e-3) == {"maxIterCG": 20, "tolCG": 1e-3}
+
+    optimization = pytest.importorskip("simpeg.optimization")
+    directives = pytest.importorskip("simpeg.directives")
+    for name in ("ProjectedGNCG", "InexactGaussNewton"):
+        cls = getattr(optimization, name)
+        cls(maxIter=2, **cg_keywords(cls, maxiter=10, rtol=1e-3))
+    in_memory_output(directives.SaveOutputEveryIteration)

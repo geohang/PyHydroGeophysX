@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 import numpy as np
+from PyHydroGeophysX._internal.simpeg_compat import cg_keywords, in_memory_output
 import simpeg.electromagnetics.frequency_domain as fdem
 from discretize import TensorMesh
 from simpeg import (
@@ -372,8 +373,8 @@ class FDEMInversion:
         opt = optimization.ProjectedGNCG(
             maxIter=int(self.parameters["max_iterations"]),
             maxIterLS=20,
-            maxIterCG=int(self.parameters["cg_maxiter"]),
-            tolCG=1e-3,
+            **cg_keywords(optimization.ProjectedGNCG,
+                          maxiter=int(self.parameters["cg_maxiter"]), rtol=1e-3),
         )
 
         lower_bound = max(float(self.parameters["lower_bound"]), 1e-12)
@@ -386,7 +387,7 @@ class FDEMInversion:
         directives_list = [
             directives.UpdateSensitivityWeights(),
             directives.BetaEstimate_ByEig(beta0_ratio=float(self.parameters["beta0_ratio"])),
-            directives.SaveOutputEveryIteration(save_txt=False),
+            in_memory_output(directives.SaveOutputEveryIteration),
         ]
 
         if self.parameters["use_irls"]:
