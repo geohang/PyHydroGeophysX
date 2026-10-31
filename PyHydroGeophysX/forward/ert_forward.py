@@ -81,6 +81,7 @@ class ERTForwardModeling:
         self.mesh = mesh
         self.data = data
         self.fwd_operator = ert.ERTModelling()
+        self._cell_operator = None
         
         if data is not None:
             self.fwd_operator.setData(data)
@@ -96,6 +97,7 @@ class ERTForwardModeling:
         """
         self.data = data
         self.fwd_operator.setData(data)
+        self._cell_operator = None
     
     def set_mesh(self, mesh: pg.Mesh) -> None:
         """
@@ -106,6 +108,36 @@ class ERTForwardModeling:
         """
         self.mesh = mesh
         self.fwd_operator.setMesh(mesh)
+        self._cell_operator = None
+
+    def _operator_for(self, model: Any) -> Any:
+        """The operator whose parameters ``model`` holds: region parameters or cells.
+
+        pyGIMLi's region manager treats a marker-1 region as background, so a
+        mesh with one (the outer region of a 3D or a para mesh) has fewer
+        parameters than cells. A model with one value per cell must then be
+        modelled with the region manager ignored, as ``ert.simulate`` does;
+        handed to the region operator it is mapped onto the wrong cells.
+        """
+        manager = getattr(self.fwd_operator, "regionManager", None)
+        if manager is None or self.mesh is None:
+            return self.fwd_operator
+        n_model = len(model)
+        n_params = int(manager().parameterCount())
+        n_cells = int(self.mesh.cellCount())
+        if n_params == 0 or n_model == n_params:
+            return self.fwd_operator
+        if n_model == n_cells:
+            if self._cell_operator is None:
+                operator = ert.ERTModelling()
+                if self.data is not None:
+                    operator.setData(self.data)
+                operator.setMesh(self.mesh, ignoreRegionManager=True)
+                self._cell_operator = operator
+            return self._cell_operator
+        raise ValueError(
+            f"The resistivity model has {n_model} values; the mesh has {n_cells} cells "
+            f"and the forward operator {n_params} region parameters.")
     
     def forward(self, resistivity_model: np.ndarray, log_transform: bool = True) -> np.ndarray:
         """
@@ -134,7 +166,7 @@ class ERTForwardModeling:
         check_resistivity_model(model)
 
         # Calculate response
-        response = self.fwd_operator.response(model)
+        response = self._operator_for(model).response(model)
 
         # Log-transform response if requested
         if log_transform:
@@ -167,11 +199,12 @@ class ERTForwardModeling:
         check_resistivity_model(model)
 
         # Calculate response
-        response = self.fwd_operator.response(model)
+        operator = self._operator_for(model)
+        response = operator.response(model)
 
         # Create Jacobian matrix
-        self.fwd_operator.createJacobian(model)
-        jacobian = self.fwd_operator.jacobian()
+        operator.createJacobian(model)
+        jacobian = operator.jacobian()
         J = pg.utils.gmat2numpy(jacobian)
         
         # Process Jacobian according to log transformations
