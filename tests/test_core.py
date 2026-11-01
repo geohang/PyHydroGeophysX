@@ -3409,3 +3409,33 @@ def test_srt_pygimli_pipeline_applies_requested_regularization(tmp_path, monkeyp
     assert result["mgr"].used["lam"] == result["lambda_used"] == 73.
     assert result["mgr"].used["maxIter"] == 7
     assert result["mgr"].used["mesh"] is mesh
+
+
+def test_a_per_cell_resistivity_model_stays_on_its_cells_when_the_mesh_has_a_background_region():
+    """pyGIMLi's region manager treats a marker-1 region as background, so such a
+    mesh has fewer region parameters than cells. A model with one value per cell
+    handed to the region operator was mapped onto the wrong cells: a two-layer
+    Wenner response came out up to 284 % off. It must match ``ert.simulate``,
+    which models per-cell values with the region manager ignored."""
+    pg = pytest.importorskip("pygimli")
+    import pygimli.meshtools as mt
+    from pygimli.physics import ert
+
+    from PyHydroGeophysX.forward.ert_forward import ERTForwardModeling
+
+    data = ert.createData(elecs=np.linspace(0.0, 23.0, 24), schemeName="wa")
+    world = mt.createWorld(start=[-100, 0], end=[123, -100], layers=[-5.0], worldMarker=True)
+    for sensor in data.sensors():
+        world.createNode(sensor)
+        world.createNode(sensor + pg.RVector3(0, -0.1))
+    mesh = mt.createMesh(world, quality=34, area=25.0)
+    model = np.where(np.asarray(mesh.cellCenters())[:, 1] > -5.0, 100.0, 10.0)
+
+    rhoa = ERTForwardModeling(mesh, data).forward(model, log_transform=False)
+
+    reference = ert.ERTModelling()
+    reference.setData(data)
+    reference.setMesh(mesh, ignoreRegionManager=True)
+    assert np.allclose(rhoa, np.asarray(reference.response(model)), rtol=1e-8)
+    with pytest.raises(ValueError, match="values"):
+        ERTForwardModeling(mesh, data).forward(np.full(7, 100.0), log_transform=False)
