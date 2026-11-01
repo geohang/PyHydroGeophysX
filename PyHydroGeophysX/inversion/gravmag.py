@@ -7,6 +7,8 @@ from typing import Any, Callable, Dict, Optional, Tuple
 
 import numpy as np
 
+from PyHydroGeophysX._internal.simpeg_compat import cg_keywords, in_memory_output
+
 from PyHydroGeophysX._internal.optional_dependencies import BackendUnavailable
 from PyHydroGeophysX._internal.utils import noop as _noop
 from PyHydroGeophysX.data_processing import table_io
@@ -210,7 +212,7 @@ def invert_gravmag(x, y, value, kind: str, *, z: Optional[np.ndarray] = None,
         data=data.Data(survey, dobs=value, standard_deviation=std), simulation=sim)
     reg = regularization.WeightedLeastSquares(mesh, active_cells=actv)
     opt = optimization.ProjectedGNCG(maxIter=int(max_iterations), lower=lower, upper=upper,
-                                     maxIterCG=20, tolCG=1e-3)
+                                     **cg_keywords(optimization.ProjectedGNCG, maxiter=20, rtol=1e-3))
     beta_report: Dict[str, Any] = {"solver": str(solver)}
     if str(solver).lower() == "linear":
         # Potential-field sensitivities do not depend on the model, so this is a
@@ -257,9 +259,9 @@ def invert_gravmag(x, y, value, kind: str, *, z: Optional[np.ndarray] = None,
             survey={"n_loaded": n_loaded, "n_missing": n_missing, "warnings": warnings})
 
     invprob = inverse_problem.BaseInvProblem(dmis, reg, opt)
-    # ``on_disk`` was added in newer SimPEG releases. ``save_txt=False`` keeps
-    # iteration history in memory and is supported by both 0.24 and newer APIs.
-    history_directive = directives.SaveOutputEveryIteration(save_txt=False)
+    # Iteration history in memory: ``on_disk=False`` from SimPEG 0.25, which
+    # removed ``save_txt`` in 0.26; in_memory_output picks the accepted one.
+    history_directive = in_memory_output(directives.SaveOutputEveryIteration)
     dlist = [directives.UpdateSensitivityWeights(every_iteration=False),
              directives.BetaEstimate_ByEig(beta0_ratio=float(beta0_ratio),
                                            random_seed=random_seed),
