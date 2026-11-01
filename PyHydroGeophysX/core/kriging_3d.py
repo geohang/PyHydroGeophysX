@@ -133,7 +133,8 @@ def optimize_variogram_model(bins: np.ndarray,
                            variograms: np.ndarray,
                            n_samples: int = 10000,
                            n_best: int = 20,
-                           parameter_ranges: Optional[Dict[str, Tuple[float, float]]] = None) -> List[Dict]:
+                           parameter_ranges: Optional[Dict[str, Tuple[float, float]]] = None,
+                           random_seed: Optional[int] = None) -> List[Dict]:
     """
     Find optimal variogram model parameters through random sampling.
     
@@ -143,6 +144,7 @@ def optimize_variogram_model(bins: np.ndarray,
         n_samples: Number of random samples to test
         n_best: Number of best models to return
         parameter_ranges: Dictionary of parameter ranges for sampling
+        random_seed: Seed of the sampling, for a reproducible search
         
     Returns:
         List of dictionaries containing best model parameters
@@ -163,17 +165,18 @@ def optimize_variogram_model(bins: np.ndarray,
         }
     
     sample_results = []
+    rng = np.random.default_rng(random_seed)
     
     for i in range(n_samples):
         # Random sampling of parameters
         params = {
-            'yaw': np.random.uniform(*parameter_ranges['yaw']),
-            'pitch': np.random.uniform(*parameter_ranges['pitch']),
-            'roll': np.random.uniform(*parameter_ranges['roll']),
-            'len_x': np.random.uniform(*parameter_ranges['len_x']),
-            'len_y': np.random.uniform(*parameter_ranges['len_y']),
-            'len_z': np.random.uniform(*parameter_ranges['len_z']),
-            'sill': np.random.uniform(*parameter_ranges['sill'])
+            'yaw': rng.uniform(*parameter_ranges['yaw']),
+            'pitch': rng.uniform(*parameter_ranges['pitch']),
+            'roll': rng.uniform(*parameter_ranges['roll']),
+            'len_x': rng.uniform(*parameter_ranges['len_x']),
+            'len_y': rng.uniform(*parameter_ranges['len_y']),
+            'len_z': rng.uniform(*parameter_ranges['len_z']),
+            'sill': rng.uniform(*parameter_ranges['sill'])
         }
         
         # Create model
@@ -209,7 +212,8 @@ def krige_seismic_velocity_3d(topography_file: Union[str, np.ndarray],
                              n_variogram_samples: int = 10000,
                              train_test_split: float = 0.8,
                              output_prefix: str = "seismic_3d",
-                             save_results: bool = True) -> Tuple[pv.StructuredGrid, np.ndarray, Dict]:
+                             save_results: bool = True,
+                             random_seed: Optional[int] = None) -> Tuple[pv.StructuredGrid, np.ndarray, Dict]:
     """
     Perform 3D kriging of seismic velocity data.
     
@@ -226,6 +230,7 @@ def krige_seismic_velocity_3d(topography_file: Union[str, np.ndarray],
         train_test_split: Fraction of data to use for training (rest for validation)
         output_prefix: Prefix for output files
         save_results: Whether to save results to files
+        random_seed: Seed of the train/test split and the variogram search
         
     Returns:
         Tuple of (mesh, kriged_field, kriging_info).
@@ -253,7 +258,8 @@ def krige_seismic_velocity_3d(topography_file: Union[str, np.ndarray],
     n_total = velocity_data.shape[0]
     n_train = int(n_total * train_test_split)
     indices = np.arange(n_total)
-    np.random.shuffle(indices)
+    rng = np.random.default_rng(random_seed)
+    rng.shuffle(indices)
     
     train_indices = indices[:n_train]
     test_indices = indices[n_train:]
@@ -276,7 +282,8 @@ def krige_seismic_velocity_3d(topography_file: Union[str, np.ndarray],
             variogram_results['bins'],
             variogram_results['variograms'],
             n_samples=n_variogram_samples,
-            n_best=1
+            n_best=1,
+            random_seed=None if random_seed is None else int(random_seed) + 1,
         )
         
         best_model = best_models[0]['model']

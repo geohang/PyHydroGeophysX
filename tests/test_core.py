@@ -3409,3 +3409,46 @@ def test_srt_pygimli_pipeline_applies_requested_regularization(tmp_path, monkeyp
     assert result["mgr"].used["lam"] == result["lambda_used"] == 73.
     assert result["mgr"].used["maxIter"] == 7
     assert result["mgr"].used["mesh"] is mesh
+
+
+def _joint_gravity_magnetics_model(seed):
+    pytest.importorskip("simpeg")
+    from PyHydroGeophysX.forward.gravmag import gravity_sphere, magnetic_dipole
+    from PyHydroGeophysX.inversion.joint_gravity_magnetics import JointGravityMagneticsInversion
+
+    grid_x, grid_y = np.meshgrid(np.linspace(-100.0, 100.0, 7), np.linspace(-100.0, 100.0, 7))
+    x, y = grid_x.ravel(), grid_y.ravel()
+    z = np.ones(x.size)
+    body = {"x0": 0.0, "y0": 0.0, "z0": 45.0, "radius": 28.0, "density": 0.3, "susceptibility": 0.035}
+    field = {"strength": 50000.0, "inclination": 60.0, "declination": 0.0}
+    joint = JointGravityMagneticsInversion(
+        gravity_data={"x": x, "y": y, "z": z, "value": gravity_sphere(x, y, body)},
+        magnetics_data={"x": x, "y": y, "z": z, "value": magnetic_dipole(x, y, body, field)},
+        field=field, n_xy=6, n_z=4, max_iterations=2, run_baseline=False, random_seed=seed,
+    ).run()
+    return np.r_[np.asarray(joint.density, dtype=float), np.asarray(joint.susceptibility, dtype=float)]
+
+
+def test_a_seeded_joint_gravity_magnetics_inversion_gives_the_same_model_twice():
+    """SimPEG >= 0.23's PairedBetaEstimate_ByEig draws from its own ``seed``, not
+    the global NumPy state the inversion seeded, so two runs with the same
+    random_seed differed by 2.6 %."""
+    np.random.seed(1)
+    first = _joint_gravity_magnetics_model(seed=11)
+    np.random.seed(2)
+    second = _joint_gravity_magnetics_model(seed=11)
+    np.testing.assert_array_equal(first, second)
+
+
+def test_a_seeded_variogram_search_is_reproducible():
+    """The variogram search and the train/test split drew from the global NumPy
+    state; with ``random_seed`` they are reproducible."""
+    pytest.importorskip("gstools")
+    from PyHydroGeophysX.core.kriging_3d import optimize_variogram_model
+
+    bins = np.linspace(5.0, 100.0, 12)[None, :]
+    variograms = 50.0 * (1.0 - np.exp(-bins[0] / 30.0))
+    first = optimize_variogram_model(bins, variograms, n_samples=40, n_best=3, random_seed=5)
+    second = optimize_variogram_model(bins, variograms, n_samples=40, n_best=3, random_seed=5)
+    keys = ("yaw", "pitch", "roll", "len_x", "len_y", "len_z", "sill", "rms")
+    assert [[best[k] for k in keys] for best in first] == [[best[k] for k in keys] for best in second]

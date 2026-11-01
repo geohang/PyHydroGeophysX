@@ -368,13 +368,15 @@ class JointGravityMagneticsInversion:
                     "chi2_magnetics": float(values[1]) / mag["value"].size,
                 })
 
+        beta_estimate = directives.PairedBetaEstimate_ByEig(beta0_ratio=self.beta0_ratio)
+        # SimPEG >= 0.23 draws from its own ``seed``, not the global state seeded below.
+        if self.random_seed is not None and hasattr(beta_estimate, "seed"):
+            beta_estimate.seed = int(self.random_seed)
         directive_list = [
             directives.SimilarityMeasureInversionDirective(),
             directives.UpdateSensitivityWeights(every_iteration=False),
             directives.MovingAndMultiTargetStopping(tol=1e-6),
-            directives.PairedBetaEstimate_ByEig(
-                beta0_ratio=self.beta0_ratio
-            ),
+            beta_estimate,
             directives.PairedBetaSchedule(cooling_factor=5, cooling_rate=1),
             history_output,
             directives.UpdatePreconditioner(),
