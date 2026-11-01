@@ -1,0 +1,19 @@
+PyHydroGeophysX.agents.assistants package
+=========================================
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   PyHydroGeophysX.agents.assistants.aquah
+   PyHydroGeophysX.agents.assistants.geosage
+
+Module contents
+---------------
+
+.. automodule:: PyHydroGeophysX.agents.assistants
+   :members:
+   :show-inheritance:
+   :undoc-members:

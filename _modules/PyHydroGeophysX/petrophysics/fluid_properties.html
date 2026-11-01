@@ -1,0 +1,787 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PyHydroGeophysX.petrophysics.fluid_properties &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../../../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery.css?v=c83e6b79" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/usage-stats.css?v=66b2b2d9" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/site.css?v=245c0fde" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../../../_static/documentation_options.js?v=1dd76d02"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/PyHydroGeophysX/petrophysics/fluid_properties';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../../../_static/usage-stats.js?v=84c7f53e"></script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/petrophysics/fluid_properties.html" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../../_static/searchtools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <script src="../../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../agents/index.html">
+    Agentic AI
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API reference
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../citation.html">
+    Citation
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../changelog.html">
+    Changelog
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../agents/index.html">
+    Agentic AI
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../api/index.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../citation.html">
+    Citation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../changelog.html">
+    Changelog
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">PyHydroGeophysX.petrophysics.fluid_properties</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for PyHydroGeophysX.petrophysics.fluid_properties</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Pore-fluid properties with explicit SI inputs and empirical-model units."""</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">NamedTuple</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+
+<div class="viewcode-block" id="BrineProperties">
+<a class="viewcode-back" href="../../../api/petrophysics.html#PyHydroGeophysX.petrophysics.fluid_properties.BrineProperties">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">BrineProperties</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Bulk modulus in GPa and density in kg/m3, with broadcast input shape."""</span>
+
+    <span class="n">bulk_modulus</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+    <span class="n">density</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span></div>
+
+
+
+<span class="c1"># Limiting equivalent (NOT molar) conductivities at 25 deg C, S m2 / eq.</span>
+<span class="c1"># Kanciruk et al. (1986), ORNL/TM-10153, Table 8, CONCAL, printed p. 30:</span>
+<span class="c1"># https://archive.epa.gov/emap/archive-emap/web/pdf/elsi_dd-2.pdf#page=40</span>
+<span class="c1"># Its S cm2/eq coefficients are converted here by 1e-4. In particular,</span>
+<span class="c1"># Ca++ is 59.47, not the molar value 118.94; CO3-- is 69.3, not 138.6.</span>
+<span class="n">LIMITING_EQUIVALENT_CONDUCTIVITIES</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">ion</span><span class="p">:</span> <span class="n">value</span> <span class="o">*</span> <span class="mf">1e-4</span> <span class="k">for</span> <span class="n">ion</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="p">{</span>
+        <span class="s2">"H+"</span><span class="p">:</span> <span class="mf">349.65</span><span class="p">,</span> <span class="s2">"OH-"</span><span class="p">:</span> <span class="mf">198.0</span><span class="p">,</span> <span class="s2">"Na+"</span><span class="p">:</span> <span class="mf">50.08</span><span class="p">,</span> <span class="s2">"Cl-"</span><span class="p">:</span> <span class="mf">76.31</span><span class="p">,</span>
+        <span class="s2">"Ca++"</span><span class="p">:</span> <span class="mf">59.47</span><span class="p">,</span> <span class="s2">"HCO3-"</span><span class="p">:</span> <span class="mf">44.5</span><span class="p">,</span> <span class="s2">"CO3--"</span><span class="p">:</span> <span class="mf">69.3</span><span class="p">,</span> <span class="s2">"Mg++"</span><span class="p">:</span> <span class="mf">53.0</span><span class="p">,</span>
+        <span class="s2">"K+"</span><span class="p">:</span> <span class="mf">73.48</span><span class="p">,</span> <span class="s2">"NH4+"</span><span class="p">:</span> <span class="mf">73.5</span><span class="p">,</span> <span class="s2">"SO4--"</span><span class="p">:</span> <span class="mf">80.0</span><span class="p">,</span> <span class="s2">"NO3-"</span><span class="p">:</span> <span class="mf">71.42</span><span class="p">,</span>
+        <span class="s2">"F-"</span><span class="p">:</span> <span class="mf">55.4</span><span class="p">,</span>
+    <span class="p">}</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+<span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_nonnegative</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+    <span class="n">value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">value</span><span class="p">))</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">value</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> must contain finite nonnegative values."</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">value</span>
+
+
+<div class="viewcode-block" id="ion_charge">
+<a class="viewcode-back" href="../../../api/petrophysics.html#PyHydroGeophysX.petrophysics.fluid_properties.ion_charge">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">ion_charge</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Return signed charge from repeated trailing signs (Ca++=2, CO3--=-2).</span>
+
+<span class="sd">    Only the repeated-sign convention is accepted. Formula digits belong to</span>
+<span class="sd">    the species (NH4+ has charge +1); numeric charge notation is not parsed.</span>
+<span class="sd">    Missing or mixed trailing signs raise ValueError.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"An ion name must be a string with trailing signs."</span><span class="p">)</span>
+    <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">fullmatch</span><span class="p">(</span><span class="sa">r</span><span class="s2">"([^+\-\s]+)(\++|-+)"</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">match</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Use an ion name with repeated trailing signs, e.g. Ca++."</span><span class="p">)</span>
+    <span class="n">signs</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">signs</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="k">if</span> <span class="n">signs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"+"</span> <span class="k">else</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="pore_fluid_conductivity">
+<a class="viewcode-back" href="../../../api/petrophysics.html#PyHydroGeophysX.petrophysics.fluid_properties.pore_fluid_conductivity">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">pore_fluid_conductivity</span><span class="p">(</span>
+    <span class="n">conc</span><span class="p">,</span> <span class="n">equivalent_conductivities</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">return_contributions</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span>
+    <span class="n">ionic_strength_correction</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">kohlrausch_coefficient</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Calculate pore-water conductivity at 25 deg C in S/m.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    conc : mapping</span>
+<span class="sd">        Ion names to dissolved-species concentrations in mol/L. Values may</span>
+<span class="sd">        be scalars or broadcast-compatible arrays; supply speciated ions,</span>
+<span class="sd">        not total analytical concentrations or neutral salts.</span>
+<span class="sd">    equivalent_conductivities : mapping, optional</span>
+<span class="sd">        Overrides/additions to the limiting table, in S m2/eq. Do not supply</span>
+<span class="sd">        molar conductivities: sigma_i = abs(z_i) * lambda_i * c_i * 1000.</span>
+<span class="sd">        The default table is Kanciruk et al. (1986), ORNL/TM-10153, Table 8,</span>
+<span class="sd">        CONCAL (p. 30). Unknown ions require an explicit coefficient.</span>
+<span class="sd">    return_contributions : bool</span>
+<span class="sd">        If True return (sigma_w, {ion: sigma_i}), otherwise only sigma_w.</span>
+<span class="sd">        An empty composition returns zero (no implicit water autoionization).</span>
+<span class="sd">    ionic_strength_correction : bool</span>
+<span class="sd">        Off by default. Apply a calibrated Kohlrausch-type factor</span>
+<span class="sd">        1 - a * sqrt(I), where I = 0.5 * sum(c_i * z_i**2) in mol/L,</span>
+<span class="sd">        to every contribution. Intended only for dilute strong electrolytes</span>
+<span class="sd">        of the composition used to calibrate a; no speciation is performed.</span>
+<span class="sd">    kohlrausch_coefficient : float, optional</span>
+<span class="sd">        Required when correction is enabled, in (mol/L)**(-1/2). There is no</span>
+<span class="sd">        universal default. For a fixed electrolyte, Kohlrausch's</span>
+<span class="sd">        Lambda = Lambda0 - A * sqrt(c_salt) gives</span>
+<span class="sd">        a = A / (Lambda0 * sqrt(I/c_salt)). See Metrohm, *Conductometry -</span>
+<span class="sd">        Conductivity Measurement*, monograph 8.109.5021, p. 14.</span>
+<span class="sd">        A negative resulting factor raises ValueError rather than clipping.</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    Correction is an empirical fixed-composition approximation, not a</span>
+<span class="sd">    general mixed-electrolyte transport model. Contributions under this</span>
+<span class="sd">    approximation retain their limiting relative proportions.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ionic_strength_correction</span><span class="p">,</span> <span class="p">(</span><span class="nb">bool</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"ionic_strength_correction must be boolean."</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">ionic_strength_correction</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">kohlrausch_coefficient</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Supply a calibrated kohlrausch_coefficient."</span><span class="p">)</span>
+        <span class="n">coefficient</span> <span class="o">=</span> <span class="n">_nonnegative</span><span class="p">(</span><span class="n">kohlrausch_coefficient</span><span class="p">,</span> <span class="s2">"kohlrausch_coefficient"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">coefficient</span><span class="o">.</span><span class="n">ndim</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"kohlrausch_coefficient must be a scalar."</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">kohlrausch_coefficient</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Enable ionic_strength_correction to use its coefficient."</span><span class="p">)</span>
+
+    <span class="n">table</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">LIMITING_EQUIVALENT_CONDUCTIVITIES</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">equivalent_conductivities</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">table</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">equivalent_conductivities</span><span class="p">)</span>
+    <span class="n">names</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">conc</span><span class="p">)</span>
+    <span class="n">charges</span> <span class="o">=</span> <span class="p">[</span><span class="n">ion_charge</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span><span class="p">]</span>
+    <span class="n">concentrations</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">broadcast_arrays</span><span class="p">(</span><span class="o">*</span><span class="p">[</span>
+        <span class="n">_nonnegative</span><span class="p">(</span><span class="n">conc</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="sa">f</span><span class="s2">"concentration of </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span>
+    <span class="p">])</span> <span class="k">if</span> <span class="n">names</span> <span class="k">else</span> <span class="p">[]</span>
+    <span class="n">contributions</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">strength</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">charge</span><span class="p">,</span> <span class="n">concentration</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">names</span><span class="p">,</span> <span class="n">charges</span><span class="p">,</span> <span class="n">concentrations</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">table</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"No equivalent conductivity for </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">; supply one."</span><span class="p">)</span>
+        <span class="n">conductivity</span> <span class="o">=</span> <span class="n">_nonnegative</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="n">name</span><span class="p">],</span> <span class="sa">f</span><span class="s2">"equivalent conductivity of </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">conductivity</span><span class="o">.</span><span class="n">ndim</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Equivalent conductivity coefficients must be scalars."</span><span class="p">)</span>
+        <span class="n">contributions</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">charge</span><span class="p">)</span> <span class="o">*</span> <span class="n">conductivity</span> <span class="o">*</span> <span class="n">concentration</span> <span class="o">*</span> <span class="mi">1000</span>
+        <span class="n">strength</span> <span class="o">=</span> <span class="n">strength</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">charge</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">concentration</span>
+    <span class="k">if</span> <span class="n">ionic_strength_correction</span><span class="p">:</span>
+        <span class="n">factor</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">coefficient</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">strength</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">factor</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Kohlrausch correction is outside its calibrated dilute range."</span><span class="p">)</span>
+        <span class="n">contributions</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">value</span> <span class="o">*</span> <span class="n">factor</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">contributions</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+    <span class="n">sigma_w</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">contributions</span><span class="o">.</span><span class="n">values</span><span class="p">(),</span> <span class="mf">0.0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">sigma_w</span><span class="p">,</span> <span class="n">contributions</span><span class="p">)</span> <span class="k">if</span> <span class="n">return_contributions</span> <span class="k">else</span> <span class="n">sigma_w</span></div>
+
+
+
+<div class="viewcode-block" id="bulk_cec_to_qv">
+<a class="viewcode-back" href="../../../api/petrophysics.html#PyHydroGeophysX.petrophysics.fluid_properties.bulk_cec_to_qv">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">bulk_cec_to_qv</span><span class="p">(</span><span class="n">cec</span><span class="p">,</span> <span class="n">porosity</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Convert CEC in eq/m3 bulk to Qv in meq/cm3 pore.</span>
+
+<span class="sd">    Qv = CEC / porosity * 1e-3. This accepts bulk-volume CEC, not</span>
+<span class="sd">    mass-specific laboratory CEC (e.g. meq/100 g). Inputs broadcast.</span>
+<span class="sd">    Porosity must be in (0, 1]; CEC must be finite and nonnegative.</span>
+<span class="sd">    """</span>
+    <span class="n">cec</span><span class="p">,</span> <span class="n">porosity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">broadcast_arrays</span><span class="p">(</span>
+        <span class="n">_nonnegative</span><span class="p">(</span><span class="n">cec</span><span class="p">,</span> <span class="s2">"cec"</span><span class="p">),</span> <span class="n">_nonnegative</span><span class="p">(</span><span class="n">porosity</span><span class="p">,</span> <span class="s2">"porosity"</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">((</span><span class="n">porosity</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">porosity</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"porosity must be in (0, 1]."</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">cec</span> <span class="o">/</span> <span class="n">porosity</span> <span class="o">*</span> <span class="mf">1e-3</span></div>
+
+
+
+<div class="viewcode-block" id="waxman_smits_surface_conductivity">
+<a class="viewcode-back" href="../../../api/petrophysics.html#PyHydroGeophysX.petrophysics.fluid_properties.waxman_smits_surface_conductivity">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">waxman_smits_surface_conductivity</span><span class="p">(</span><span class="n">sigma_w</span><span class="p">,</span> <span class="n">qv</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Return the Waxman-Thomas surface coefficient in S/m at 25 deg C.</span>
+
+<span class="sd">    sigma_s = 4.6 * (1 - 0.6 * exp(-sigma_w / 1.3)) * qv,</span>
+<span class="sd">    with sigma_w in S/m and qv in meq/cm3 pore. Thus 1.3 has units S/m</span>
+<span class="sd">    and 4.6 has units (S/m)/(meq/cm3). Inputs broadcast.</span>
+
+<span class="sd">    Pass the result as sigma_s to WS_Model, which applies the formation</span>
+<span class="sd">    factor. It is NOT the unscaled sigma_sur in the other converters.</span>
+<span class="sd">    Reference: Waxman and Thomas (1974), doi:10.2118/4094-PA.</span>
+<span class="sd">    """</span>
+    <span class="n">sigma_w</span><span class="p">,</span> <span class="n">qv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">broadcast_arrays</span><span class="p">(</span>
+        <span class="n">_nonnegative</span><span class="p">(</span><span class="n">sigma_w</span><span class="p">,</span> <span class="s2">"sigma_w"</span><span class="p">),</span> <span class="n">_nonnegative</span><span class="p">(</span><span class="n">qv</span><span class="p">,</span> <span class="s2">"qv"</span><span class="p">))</span>
+    <span class="k">return</span> <span class="mf">4.6</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="mf">0.6</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">sigma_w</span> <span class="o">/</span> <span class="mf">1.3</span><span class="p">))</span> <span class="o">*</span> <span class="n">qv</span></div>
+
+
+
+<div class="viewcode-block" id="batzle_wang_brine">
+<a class="viewcode-back" href="../../../api/petrophysics.html#PyHydroGeophysX.petrophysics.fluid_properties.batzle_wang_brine">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">batzle_wang_brine</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">salinity</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Return NaCl-brine bulk modulus (GPa) and density (kg/m3).</span>
+
+<span class="sd">    p is pore-fluid pressure in Pa (not effective grain-contact pressure);</span>
+<span class="sd">    T is temperature in deg C; salinity is NaCl mass fraction in kg/kg of</span>
+<span class="sd">    solution. Scalars and arrays broadcast together. The empirical liquid</span>
+<span class="sd">    model is restricted here to 0--100 MPa, 0--100 deg C and 0--0.35 kg/kg;</span>
+<span class="sd">    the caller must ensure the fluid is liquid and salt remains dissolved.</span>
+
+<span class="sd">    Implements the density and acoustic-velocity polynomials of Batzle and</span>
+<span class="sd">    Wang (1992), *Geophysics* 57, 1396--1408, doi:10.1190/1.1443207.</span>
+<span class="sd">    The published polynomial uses MPa and g/cm3 internally.</span>
+<span class="sd">    """</span>
+    <span class="n">p</span><span class="p">,</span> <span class="n">temperature</span><span class="p">,</span> <span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">broadcast_arrays</span><span class="p">(</span>
+        <span class="n">_nonnegative</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="s2">"p"</span><span class="p">),</span> <span class="n">_nonnegative</span><span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="s2">"T"</span><span class="p">),</span>
+        <span class="n">_nonnegative</span><span class="p">(</span><span class="n">salinity</span><span class="p">,</span> <span class="s2">"salinity"</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">p</span> <span class="o">&gt;</span> <span class="mf">100e6</span><span class="p">)</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">temperature</span> <span class="o">&gt;</span> <span class="mi">100</span><span class="p">)</span> <span class="ow">or</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">s</span> <span class="o">&gt;</span> <span class="mf">.35</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Use p &lt;= 100 MPa, T &lt;= 100 deg C, salinity &lt;= 0.35."</span><span class="p">)</span>
+    <span class="n">pressure</span> <span class="o">=</span> <span class="n">p</span> <span class="o">/</span> <span class="mf">1e6</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">temperature</span>
+    <span class="n">rho_water</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">+</span> <span class="mf">1e-6</span> <span class="o">*</span> <span class="p">(</span>
+        <span class="o">-</span><span class="mi">80</span><span class="o">*</span><span class="n">t</span> <span class="o">-</span> <span class="mf">3.3</span><span class="o">*</span><span class="n">t</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="mf">.00175</span><span class="o">*</span><span class="n">t</span><span class="o">**</span><span class="mi">3</span> <span class="o">+</span> <span class="mi">489</span><span class="o">*</span><span class="n">pressure</span> <span class="o">-</span> <span class="mi">2</span><span class="o">*</span><span class="n">t</span><span class="o">*</span><span class="n">pressure</span>
+        <span class="o">+</span> <span class="mf">.016</span><span class="o">*</span><span class="n">t</span><span class="o">**</span><span class="mi">2</span><span class="o">*</span><span class="n">pressure</span> <span class="o">-</span> <span class="mf">1.3e-5</span><span class="o">*</span><span class="n">t</span><span class="o">**</span><span class="mi">3</span><span class="o">*</span><span class="n">pressure</span>
+        <span class="o">-</span> <span class="mf">.333</span><span class="o">*</span><span class="n">pressure</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="mf">.002</span><span class="o">*</span><span class="n">t</span><span class="o">*</span><span class="n">pressure</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">density</span> <span class="o">=</span> <span class="mi">1000</span> <span class="o">*</span> <span class="p">(</span><span class="n">rho_water</span> <span class="o">+</span> <span class="n">s</span> <span class="o">*</span> <span class="p">(</span><span class="mf">.668</span> <span class="o">+</span> <span class="mf">.44</span><span class="o">*</span><span class="n">s</span> <span class="o">+</span> <span class="mf">1e-6</span> <span class="o">*</span> <span class="p">(</span>
+        <span class="mi">300</span><span class="o">*</span><span class="n">pressure</span> <span class="o">-</span> <span class="mi">2400</span><span class="o">*</span><span class="n">pressure</span><span class="o">*</span><span class="n">s</span>
+        <span class="o">+</span> <span class="n">t</span><span class="o">*</span><span class="p">(</span><span class="mi">80</span> <span class="o">+</span> <span class="mi">3</span><span class="o">*</span><span class="n">t</span> <span class="o">-</span> <span class="mi">3300</span><span class="o">*</span><span class="n">s</span> <span class="o">-</span> <span class="mi">13</span><span class="o">*</span><span class="n">pressure</span> <span class="o">+</span> <span class="mi">47</span><span class="o">*</span><span class="n">pressure</span><span class="o">*</span><span class="n">s</span><span class="p">))))</span>
+    <span class="n">coefficients</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span>
+        <span class="p">[</span><span class="mf">1402.85</span><span class="p">,</span> <span class="mf">1.524</span><span class="p">,</span> <span class="mf">3.437e-3</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.197e-5</span><span class="p">],</span>
+        <span class="p">[</span><span class="mf">4.871</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.11e-2</span><span class="p">,</span> <span class="mf">1.739e-4</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.628e-6</span><span class="p">],</span>
+        <span class="p">[</span><span class="o">-</span><span class="mf">4.783e-2</span><span class="p">,</span> <span class="mf">2.747e-4</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.135e-6</span><span class="p">,</span> <span class="mf">1.237e-8</span><span class="p">],</span>
+        <span class="p">[</span><span class="mf">1.487e-4</span><span class="p">,</span> <span class="o">-</span><span class="mf">6.503e-7</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.455e-8</span><span class="p">,</span> <span class="mf">1.327e-10</span><span class="p">],</span>
+        <span class="p">[</span><span class="o">-</span><span class="mf">2.197e-7</span><span class="p">,</span> <span class="mf">7.987e-10</span><span class="p">,</span> <span class="mf">5.23e-11</span><span class="p">,</span> <span class="o">-</span><span class="mf">4.614e-13</span><span class="p">],</span>
+    <span class="p">])</span>
+    <span class="n">velocity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">polynomial</span><span class="o">.</span><span class="n">polynomial</span><span class="o">.</span><span class="n">polyval2d</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">pressure</span><span class="p">,</span> <span class="n">coefficients</span><span class="p">)</span>
+    <span class="n">velocity</span> <span class="o">=</span> <span class="p">(</span><span class="n">velocity</span> <span class="o">+</span> <span class="n">s</span> <span class="o">*</span> <span class="p">(</span>
+        <span class="mi">1170</span> <span class="o">-</span> <span class="mf">9.6</span><span class="o">*</span><span class="n">t</span> <span class="o">+</span> <span class="mf">.055</span><span class="o">*</span><span class="n">t</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="mf">8.5e-5</span><span class="o">*</span><span class="n">t</span><span class="o">**</span><span class="mi">3</span> <span class="o">+</span> <span class="mf">2.6</span><span class="o">*</span><span class="n">pressure</span>
+        <span class="o">-</span> <span class="mf">.0029</span><span class="o">*</span><span class="n">t</span><span class="o">*</span><span class="n">pressure</span> <span class="o">-</span> <span class="mf">.0476</span><span class="o">*</span><span class="n">pressure</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+        <span class="o">+</span> <span class="n">s</span><span class="o">**</span><span class="mf">1.5</span> <span class="o">*</span> <span class="p">(</span><span class="mi">780</span> <span class="o">-</span> <span class="mi">10</span><span class="o">*</span><span class="n">pressure</span> <span class="o">+</span> <span class="mf">.16</span><span class="o">*</span><span class="n">pressure</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="mi">820</span><span class="o">*</span><span class="n">s</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">BrineProperties</span><span class="p">(</span><span class="n">density</span> <span class="o">*</span> <span class="n">velocity</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="mf">1e9</span><span class="p">,</span> <span class="n">density</span><span class="p">)</span></div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

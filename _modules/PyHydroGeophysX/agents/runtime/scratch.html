@@ -1,0 +1,916 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../../../../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PyHydroGeophysX.agents.runtime.scratch &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../../../../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../../../../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../../../../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sg_gallery.css?v=c83e6b79" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/usage-stats.css?v=66b2b2d9" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/site.css?v=245c0fde" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../../../../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../../../../_static/documentation_options.js?v=1dd76d02"></script>
+    <script src="../../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../../../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../../../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = '_modules/PyHydroGeophysX/agents/runtime/scratch';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../../../../_static/usage-stats.js?v=84c7f53e"></script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/_modules/PyHydroGeophysX/agents/runtime/scratch.html" />
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../../../../_static/searchtools.js"></script>
+    <script src="../../../../_static/language_data.js"></script>
+    <script src="../../../../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../../../../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../../../../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../../../../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../../../../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../agents/index.html">
+    Agentic AI
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../api/index.html">
+    API reference
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../../citation.html">
+    Citation
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../../../../changelog.html">
+    Changelog
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../methods/index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../agents/index.html">
+    Agentic AI
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../api/index.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../citation.html">
+    Citation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../../../../changelog.html">
+    Changelog
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../../../../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../../../index.html" class="nav-link">Module code</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">PyHydroGeophysX.agents.runtime.scratch</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <h1>Source code for PyHydroGeophysX.agents.runtime.scratch</h1><div class="highlight"><pre>
+<span></span><span class="sd">"""Temporary scripts an assistant writes to get past a problem, run only on a yes.</span>
+
+<span class="sd">Some failures are neither a setting nor a missing feature: a file in a layout no</span>
+<span class="sd">reader handles, a model folder written in one module's format that another</span>
+<span class="sd">module cannot open, a quantity none of the tools computes. A person at the</span>
+<span class="sd">keyboard would write ten lines of Python and carry on. This lets the assistant</span>
+<span class="sd">do the same - and only that far:</span>
+
+<span class="sd">- **The user decides.** A script is shown with what it is for, and runs only</span>
+<span class="sd">  after an explicit yes. A run with nobody to ask declines.</span>
+<span class="sd">- **The source is checked before anyone is asked** (:func:`check_script`): one</span>
+<span class="sd">  ``def main(inputs, out)``, imports from a short list of scientific libraries</span>
+<span class="sd">  and this package, no ``exec``/``eval``, no dunder attributes, no ``os``,</span>
+<span class="sd">  ``sys``, ``subprocess`` or network modules.</span>
+<span class="sd">- **It runs in a process of its own** (:func:`run_script`), in a folder of its</span>
+<span class="sd">  own, with a time limit and without the API keys in its environment. Inside</span>
+<span class="sd">  that process an audit hook refuses subprocesses, sockets and native-library</span>
+<span class="sd">  loading, and any write outside the script's folder (which holds its</span>
+<span class="sd">  temporary directory too). The user's files are read, never written.</span>
+
+<span class="sd">That is a guard rail, not a security boundary: compiled code inside numpy or</span>
+<span class="sd">pyGIMLi does not pass through Python's audit hooks. It keeps a well-meant script</span>
+<span class="sd">from doing something nobody approved; the approval is what stands between a</span>
+<span class="sd">script and the user's data.</span>
+
+<span class="sd">The script, its inputs, what it printed and what it wrote are kept in its</span>
+<span class="sd">folder, so the report can say what ran and the user can run it again.</span>
+<span class="sd">"""</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">ast</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">,</span> <span class="n">Tuple</span>
+
+<span class="c1">#: Top-level modules a script may import. Scientific libraries and this</span>
+<span class="c1">#: package; nothing that starts processes, opens sockets or edits the system.</span>
+<span class="n">ALLOWED_MODULES</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span>
+    <span class="s2">"numpy"</span><span class="p">,</span> <span class="s2">"scipy"</span><span class="p">,</span> <span class="s2">"pandas"</span><span class="p">,</span> <span class="s2">"matplotlib"</span><span class="p">,</span> <span class="s2">"pygimli"</span><span class="p">,</span> <span class="s2">"PyHydroGeophysX"</span><span class="p">,</span>
+    <span class="s2">"math"</span><span class="p">,</span> <span class="s2">"cmath"</span><span class="p">,</span> <span class="s2">"statistics"</span><span class="p">,</span> <span class="s2">"json"</span><span class="p">,</span> <span class="s2">"csv"</span><span class="p">,</span> <span class="s2">"re"</span><span class="p">,</span> <span class="s2">"datetime"</span><span class="p">,</span> <span class="s2">"collections"</span><span class="p">,</span>
+    <span class="s2">"itertools"</span><span class="p">,</span> <span class="s2">"functools"</span><span class="p">,</span> <span class="s2">"pathlib"</span><span class="p">,</span> <span class="s2">"typing"</span><span class="p">,</span> <span class="s2">"dataclasses"</span><span class="p">,</span> <span class="s2">"decimal"</span><span class="p">,</span>
+    <span class="s2">"fractions"</span><span class="p">,</span> <span class="s2">"string"</span><span class="p">,</span> <span class="s2">"textwrap"</span><span class="p">,</span> <span class="s2">"copy"</span><span class="p">,</span> <span class="s2">"operator"</span><span class="p">,</span> <span class="s2">"bisect"</span><span class="p">,</span> <span class="s2">"heapq"</span><span class="p">,</span>
+<span class="p">})</span>
+
+<span class="c1">#: Built-in names a script may not call: each one is a way round the checks.</span>
+<span class="n">FORBIDDEN_NAMES</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">({</span>
+    <span class="s2">"exec"</span><span class="p">,</span> <span class="s2">"eval"</span><span class="p">,</span> <span class="s2">"compile"</span><span class="p">,</span> <span class="s2">"__import__"</span><span class="p">,</span> <span class="s2">"globals"</span><span class="p">,</span> <span class="s2">"locals"</span><span class="p">,</span> <span class="s2">"vars"</span><span class="p">,</span>
+    <span class="s2">"getattr"</span><span class="p">,</span> <span class="s2">"setattr"</span><span class="p">,</span> <span class="s2">"delattr"</span><span class="p">,</span> <span class="s2">"breakpoint"</span><span class="p">,</span> <span class="s2">"input"</span><span class="p">,</span> <span class="s2">"help"</span><span class="p">,</span>
+<span class="p">})</span>
+
+<span class="c1">#: Longer than this and nobody reads it before saying yes.</span>
+<span class="n">MAX_SOURCE_CHARS</span> <span class="o">=</span> <span class="mi">6000</span>
+
+<span class="c1">#: Seconds a script may run before it is stopped.</span>
+<span class="n">DEFAULT_TIMEOUT_S</span> <span class="o">=</span> <span class="mi">180</span>
+
+<span class="c1">#: What the assistant is told a script looks like. Shared by the chat and the</span>
+<span class="c1">#: automatic run, so both write scripts the same checks accept.</span>
+<span class="n">SCRIPT_CONTRACT</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">"Write Python with one function `def main(inputs, out):`. `inputs` is a dict of "</span>
+    <span class="s2">"name -&gt; file or folder path (strings) to read; `out` is a pathlib.Path folder, "</span>
+    <span class="s2">"the only place you may write. Return a small JSON-serialisable dict saying what "</span>
+    <span class="s2">"you found or did and naming the files you wrote (relative to `out`). Imports "</span>
+    <span class="s2">"only from: numpy, scipy, pandas, matplotlib, pygimli, PyHydroGeophysX, math, "</span>
+    <span class="s2">"statistics, json, csv, re, datetime, collections, itertools, functools, "</span>
+    <span class="s2">"pathlib, typing, dataclasses. No os, sys, subprocess, shutil or network; no "</span>
+    <span class="s2">"exec, eval, getattr or dunder attributes; never modify the input files. Keep it "</span>
+    <span class="sa">f</span><span class="s2">"short - under </span><span class="si">{</span><span class="n">MAX_SOURCE_CHARS</span><span class="si">}</span><span class="s2"> characters - so a person can read it before "</span>
+    <span class="s2">"approving it."</span><span class="p">)</span>
+
+<span class="n">_SECRET</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">"KEY|TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIAL"</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="check_script">
+<a class="viewcode-back" href="../../../../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.scratch.check_script">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">check_script</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Why ``source`` may not run, or "" when it may be offered to the user.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    source : str</span>
+<span class="sd">        The script as the model wrote it.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str</span>
+<span class="sd">        A sentence the model can act on to fix the script, or "".</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    None</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; check_script("import numpy as np\\ndef main(inputs, out):\\n    return {}")</span>
+<span class="sd">    ''</span>
+<span class="sd">    &gt;&gt;&gt; check_script("import os\\ndef main(inputs, out):\\n    os.remove('x')")</span>
+<span class="sd">    'It imports os, which a temporary script may not use.'</span>
+<span class="sd">    &gt;&gt;&gt; check_script("def main(inputs, out):\\n    return ().__class__")</span>
+<span class="sd">    'It uses __class__; dunder attributes are not allowed.'</span>
+<span class="sd">    &gt;&gt;&gt; check_script("print('hi')")</span>
+<span class="sd">    'It must define main(inputs, out).'</span>
+<span class="sd">    """</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">source</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+        <span class="k">return</span> <span class="s2">"The script is empty."</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">MAX_SOURCE_CHARS</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">(</span><span class="sa">f</span><span class="s2">"It is </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span><span class="si">}</span><span class="s2"> characters long; keep it under </span><span class="si">{</span><span class="n">MAX_SOURCE_CHARS</span><span class="si">}</span><span class="s2"> "</span>
+                <span class="s2">"so it can be read before it runs."</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">tree</span> <span class="o">=</span> <span class="n">ast</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">SyntaxError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">"It does not parse: </span><span class="si">{</span><span class="n">exc</span><span class="o">.</span><span class="n">msg</span><span class="si">}</span><span class="s2"> (line </span><span class="si">{</span><span class="n">exc</span><span class="o">.</span><span class="n">lineno</span><span class="si">}</span><span class="s2">)."</span>
+    <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">ast</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="n">tree</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Import</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">alias</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">names</span><span class="p">:</span>
+                <span class="n">root</span> <span class="o">=</span> <span class="n">alias</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"."</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">root</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ALLOWED_MODULES</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="sa">f</span><span class="s2">"It imports </span><span class="si">{</span><span class="n">alias</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">, which a temporary script may not use."</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">ImportFrom</span><span class="p">):</span>
+            <span class="n">root</span> <span class="o">=</span> <span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">module</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">"."</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">level</span> <span class="ow">or</span> <span class="n">root</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ALLOWED_MODULES</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">(</span><span class="sa">f</span><span class="s2">"It imports from </span><span class="si">{</span><span class="n">node</span><span class="o">.</span><span class="n">module</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">'.'</span><span class="si">}</span><span class="s2">, which a temporary "</span>
+                        <span class="s2">"script may not use."</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Attribute</span><span class="p">)</span> <span class="ow">and</span> <span class="n">node</span><span class="o">.</span><span class="n">attr</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"__"</span><span class="p">):</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">"It uses </span><span class="si">{</span><span class="n">node</span><span class="o">.</span><span class="n">attr</span><span class="si">}</span><span class="s2">; dunder attributes are not allowed."</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Name</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">id</span> <span class="ow">in</span> <span class="n">FORBIDDEN_NAMES</span><span class="p">:</span>
+                <span class="k">return</span> <span class="sa">f</span><span class="s2">"It calls </span><span class="si">{</span><span class="n">node</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">, which a temporary script may not use."</span>
+            <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">id</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"__"</span><span class="p">):</span>
+                <span class="k">return</span> <span class="sa">f</span><span class="s2">"It uses </span><span class="si">{</span><span class="n">node</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2">; dunder names are not allowed."</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="p">(</span><span class="n">ast</span><span class="o">.</span><span class="n">Global</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Nonlocal</span><span class="p">)):</span>
+            <span class="k">return</span> <span class="s2">"It uses global or nonlocal; keep everything inside main."</span>
+    <span class="n">mains</span> <span class="o">=</span> <span class="p">[</span><span class="n">node</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">tree</span><span class="o">.</span><span class="n">body</span>
+             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">FunctionDef</span><span class="p">)</span> <span class="ow">and</span> <span class="n">node</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">"main"</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">mains</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">mains</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">args</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">"It must define main(inputs, out)."</span>
+    <span class="k">return</span> <span class="s2">""</span></div>
+
+
+
+<div class="viewcode-block" id="imported_modules">
+<a class="viewcode-back" href="../../../../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.scratch.imported_modules">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">imported_modules</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""The modules ``source`` imports, to load before the write guard goes up."""</span>
+    <span class="n">names</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">tree</span> <span class="o">=</span> <span class="n">ast</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">source</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">))</span>
+    <span class="k">except</span> <span class="ne">SyntaxError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">names</span>
+    <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">ast</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="n">tree</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">Import</span><span class="p">):</span>
+            <span class="n">names</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">alias</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">alias</span> <span class="ow">in</span> <span class="n">node</span><span class="o">.</span><span class="n">names</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">ast</span><span class="o">.</span><span class="n">ImportFrom</span><span class="p">)</span> <span class="ow">and</span> <span class="n">node</span><span class="o">.</span><span class="n">module</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">node</span><span class="o">.</span><span class="n">level</span><span class="p">:</span>
+            <span class="n">names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node</span><span class="o">.</span><span class="n">module</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">dict</span><span class="o">.</span><span class="n">fromkeys</span><span class="p">(</span><span class="n">names</span><span class="p">))</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_environment</span><span class="p">(</span><span class="n">out</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""The child's environment: no credentials, this package importable, no GUI."""</span>
+    <span class="n">env</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">value</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">_SECRET</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">key</span><span class="p">)}</span>
+    <span class="n">package_root</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">parents</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+    <span class="n">env</span><span class="p">[</span><span class="s2">"PYTHONPATH"</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">pathsep</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+        <span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="p">(</span><span class="n">package_root</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"PYTHONPATH"</span><span class="p">,</span> <span class="s2">""</span><span class="p">))</span> <span class="k">if</span> <span class="n">p</span><span class="p">)</span>
+    <span class="n">env</span><span class="p">[</span><span class="s2">"PYTHONIOENCODING"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"utf-8"</span>
+    <span class="n">env</span><span class="p">[</span><span class="s2">"PYTHONDONTWRITEBYTECODE"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"1"</span>
+    <span class="n">env</span><span class="p">[</span><span class="s2">"MPLBACKEND"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"Agg"</span>
+    <span class="n">env</span><span class="p">[</span><span class="s2">"MPLCONFIGDIR"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">out</span> <span class="o">/</span> <span class="s2">".mplconfig"</span><span class="p">)</span>
+    <span class="c1"># A temporary directory of its own, inside its folder: the system one holds</span>
+    <span class="c1"># other programs' files, and the script may write only where it was put.</span>
+    <span class="n">private</span> <span class="o">=</span> <span class="n">out</span> <span class="o">/</span> <span class="s2">".tmp"</span>
+    <span class="n">private</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"TMP"</span><span class="p">,</span> <span class="s2">"TEMP"</span><span class="p">,</span> <span class="s2">"TMPDIR"</span><span class="p">):</span>
+        <span class="n">env</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">private</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">env</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_kill_tree</span><span class="p">(</span><span class="n">process</span><span class="p">:</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Stop the script and anything it started."""</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">"nt"</span><span class="p">:</span>
+            <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="s2">"taskkill"</span><span class="p">,</span> <span class="s2">"/F"</span><span class="p">,</span> <span class="s2">"/T"</span><span class="p">,</span> <span class="s2">"/PID"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">process</span><span class="o">.</span><span class="n">pid</span><span class="p">)],</span>
+                           <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">killpg</span><span class="p">(</span><span class="n">process</span><span class="o">.</span><span class="n">pid</span><span class="p">,</span> <span class="mi">9</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001 - fall back to the process alone</span>
+        <span class="k">pass</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">process</span><span class="o">.</span><span class="n">kill</span><span class="p">()</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># noqa: BLE001</span>
+        <span class="k">pass</span>
+
+
+<div class="viewcode-block" id="run_script">
+<a class="viewcode-back" href="../../../../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.scratch.run_script">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_script</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">out_dir</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+               <span class="n">purpose</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">,</span> <span class="n">timeout</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DEFAULT_TIMEOUT_S</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Run an approved script in a process of its own and report what it did.</span>
+
+<span class="sd">    Call only after the user has said yes: this does not ask.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    source : str</span>
+<span class="sd">        The script; checked again here.</span>
+<span class="sd">    inputs : mapping</span>
+<span class="sd">        Name -&gt; path given to ``main`` as ``inputs``. Every path must exist.</span>
+<span class="sd">    out_dir : str or Path</span>
+<span class="sd">        The script's folder, created if needed; ``main`` gets it as ``out``.</span>
+<span class="sd">    purpose : str, optional</span>
+<span class="sd">        What the script is for, kept with it.</span>
+<span class="sd">    timeout : float, optional</span>
+<span class="sd">        Seconds before the script is stopped.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dict</span>
+<span class="sd">        ``status`` ("ok" or "failed"), ``result`` (what ``main`` returned),</span>
+<span class="sd">        ``files`` (written in ``out``, relative), ``printed`` (the end of its</span>
+<span class="sd">        output), ``error``, ``folder`` and ``seconds``.</span>
+
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    None</span>
+<span class="sd">    """</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">out_dir</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+    <span class="n">record</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"status"</span><span class="p">:</span> <span class="s2">"failed"</span><span class="p">,</span> <span class="s2">"result"</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">"files"</span><span class="p">:</span> <span class="p">[],</span>
+                              <span class="s2">"printed"</span><span class="p">:</span> <span class="s2">""</span><span class="p">,</span> <span class="s2">"error"</span><span class="p">:</span> <span class="s2">""</span><span class="p">,</span> <span class="s2">"folder"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">out</span><span class="p">),</span>
+                              <span class="s2">"seconds"</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">}</span>
+    <span class="n">problem</span> <span class="o">=</span> <span class="n">check_script</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">problem</span><span class="p">:</span>
+        <span class="n">record</span><span class="p">[</span><span class="s2">"error"</span><span class="p">]</span> <span class="o">=</span> <span class="n">problem</span>
+        <span class="k">return</span> <span class="n">record</span>
+    <span class="n">paths</span> <span class="o">=</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">name</span><span class="p">):</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">dict</span><span class="p">(</span><span class="n">inputs</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+    <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">paths</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">Path</span><span class="p">(</span><span class="n">p</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">()]</span>
+    <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+        <span class="n">record</span><span class="p">[</span><span class="s2">"error"</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"Input not found: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2">."</span>
+        <span class="k">return</span> <span class="n">record</span>
+    <span class="n">script</span> <span class="o">=</span> <span class="n">out</span> <span class="o">/</span> <span class="s2">"temporary_script.py"</span>
+    <span class="n">manifest</span> <span class="o">=</span> <span class="n">out</span> <span class="o">/</span> <span class="s2">"manifest.json"</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">out</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">header</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"# </span><span class="si">{</span><span class="n">purpose</span><span class="si">}</span><span class="se">\n</span><span class="s2">"</span> <span class="k">if</span> <span class="n">purpose</span> <span class="k">else</span> <span class="s2">""</span>
+        <span class="n">script</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">header</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">source</span><span class="p">),</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span>
+        <span class="n">manifest</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">({</span>
+            <span class="s2">"script"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">script</span><span class="p">),</span> <span class="s2">"out_dir"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">out</span><span class="p">),</span> <span class="s2">"inputs"</span><span class="p">:</span> <span class="n">paths</span><span class="p">,</span>
+            <span class="s2">"imports"</span><span class="p">:</span> <span class="n">imported_modules</span><span class="p">(</span><span class="n">source</span><span class="p">),</span> <span class="s2">"purpose"</span><span class="p">:</span> <span class="n">purpose</span><span class="p">},</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">),</span>
+            <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="n">record</span><span class="p">[</span><span class="s2">"error"</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"The script's folder could not be written: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span>
+        <span class="k">return</span> <span class="n">record</span>
+    <span class="n">child</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">with_name</span><span class="p">(</span><span class="s2">"_scratch_child.py"</span><span class="p">)</span>
+    <span class="n">started</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span>
+    <span class="n">kwargs</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">"nt"</span><span class="p">:</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s2">"creationflags"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">subprocess</span><span class="p">,</span> <span class="s2">"CREATE_NO_WINDOW"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s2">"start_new_session"</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">process</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">sys</span><span class="o">.</span><span class="n">executable</span><span class="p">,</span> <span class="s2">"-s"</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">child</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">manifest</span><span class="p">)],</span> <span class="n">cwd</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">out</span><span class="p">),</span>
+            <span class="n">env</span><span class="o">=</span><span class="n">_environment</span><span class="p">(</span><span class="n">out</span><span class="p">),</span> <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span> <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">STDOUT</span><span class="p">,</span>
+            <span class="n">stdin</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">DEVNULL</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="n">record</span><span class="p">[</span><span class="s2">"error"</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"The script could not be started: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span>
+        <span class="k">return</span> <span class="n">record</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">output</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">process</span><span class="o">.</span><span class="n">communicate</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">TimeoutExpired</span><span class="p">:</span>
+        <span class="n">_kill_tree</span><span class="p">(</span><span class="n">process</span><span class="p">)</span>
+        <span class="n">output</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">process</span><span class="o">.</span><span class="n">communicate</span><span class="p">()</span>
+        <span class="n">record</span><span class="p">[</span><span class="s2">"error"</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"The script was stopped after </span><span class="si">{</span><span class="n">timeout</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> s."</span>
+    <span class="n">record</span><span class="p">[</span><span class="s2">"seconds"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span> <span class="o">-</span> <span class="n">started</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="p">(</span><span class="n">output</span> <span class="ow">or</span> <span class="sa">b</span><span class="s2">""</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">"utf-8"</span><span class="p">,</span> <span class="n">errors</span><span class="o">=</span><span class="s2">"replace"</span><span class="p">)</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()</span>
+    <span class="n">reply</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">lines</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">reply</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">lines</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="n">reply</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">reply</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="n">record</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="s2">"ok"</span> <span class="k">if</span> <span class="n">reply</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"ok"</span><span class="p">)</span> <span class="k">else</span> <span class="s2">"failed"</span><span class="p">,</span>
+                      <span class="n">result</span><span class="o">=</span><span class="n">reply</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"result"</span><span class="p">),</span> <span class="n">files</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">reply</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"files"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]),</span>
+                      <span class="n">printed</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">reply</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"printed"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)[</span><span class="o">-</span><span class="mi">3000</span><span class="p">:])</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">reply</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"ok"</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">record</span><span class="p">[</span><span class="s2">"error"</span><span class="p">]:</span>
+            <span class="n">record</span><span class="p">[</span><span class="s2">"error"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">reply</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"error"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">"The script failed."</span><span class="p">)[</span><span class="o">-</span><span class="mi">1500</span><span class="p">:]</span>
+    <span class="k">elif</span> <span class="ow">not</span> <span class="n">record</span><span class="p">[</span><span class="s2">"error"</span><span class="p">]:</span>
+        <span class="n">record</span><span class="p">[</span><span class="s2">"error"</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"The script ended without a result: "</span>
+                           <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">[</span><span class="o">-</span><span class="mi">15</span><span class="p">:])[</span><span class="o">-</span><span class="mi">1500</span><span class="p">:])</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="p">(</span><span class="n">out</span> <span class="o">/</span> <span class="s2">"result.json"</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">record</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="nb">str</span><span class="p">),</span>
+                                         <span class="n">encoding</span><span class="o">=</span><span class="s2">"utf-8"</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>  <span class="c1"># a record beside the script; what ran is in ``record``</span>
+        <span class="k">pass</span>
+    <span class="k">return</span> <span class="n">record</span></div>
+
+
+
+<div class="viewcode-block" id="script_folder">
+<a class="viewcode-back" href="../../../../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.scratch.script_folder">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">script_folder</span><span class="p">(</span><span class="n">root</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">label</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"script"</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A new folder for one script under ``root``, named by time."""</span>
+    <span class="n">stamp</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">"%Y%m</span><span class="si">%d</span><span class="s2">-%H%M%S"</span><span class="p">)</span>
+    <span class="n">folder</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">root</span><span class="p">)</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">stamp</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">'[^A-Za-z0-9_-]+'</span><span class="p">,</span><span class="w"> </span><span class="s1">'_'</span><span class="p">,</span><span class="w"> </span><span class="n">label</span><span class="p">)[:</span><span class="mi">40</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">while</span> <span class="n">folder</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="n">n</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">folder</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">root</span><span class="p">)</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">stamp</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">label</span><span class="p">[:</span><span class="mi">40</span><span class="p">]</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2">"</span>
+    <span class="k">return</span> <span class="n">folder</span></div>
+
+
+
+<div class="viewcode-block" id="describe_for_user">
+<a class="viewcode-back" href="../../../../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.scratch.describe_for_user">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">describe_for_user</span><span class="p">(</span><span class="n">purpose</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">source</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">inputs</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The question put to the user: what the script is for, what it reads, the code.</span>
+
+<span class="sd">    The prose comes first and the code last, so the studio can show the code in</span>
+<span class="sd">    a box of its own (``qt_apps.modules.base._split_code``).</span>
+<span class="sd">    """</span>
+    <span class="n">reads</span> <span class="o">=</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="p">))</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">dict</span><span class="p">(</span><span class="n">inputs</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+    <span class="k">return</span> <span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">purpose</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">It reads </span><span class="si">{</span><span class="n">reads</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="s1">'nothing'</span><span class="si">}</span><span class="s2"> and writes only to a "</span>
+            <span class="s2">"folder of its own; your files are not changed. It runs in a separate "</span>
+            <span class="s2">"process with a time limit and no network. Read it before you decide:"</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="se">\n\n</span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">source</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="split_answer">
+<a class="viewcode-back" href="../../../../api/PyHydroGeophysX.agents.runtime.html#PyHydroGeophysX.agents.runtime.scratch.split_answer">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">split_answer</span><span class="p">(</span><span class="n">reply</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""``(purpose, code)`` from a model's JSON proposal, or ``("", "")``."""</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">..._internal.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">parse_json_object</span>
+
+    <span class="n">parsed</span> <span class="o">=</span> <span class="n">parse_json_object</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">reply</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">))</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">parsed</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">""</span><span class="p">,</span> <span class="s2">""</span>
+    <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">parsed</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"purpose"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)[:</span><span class="mi">600</span><span class="p">],</span> <span class="nb">str</span><span class="p">(</span><span class="n">parsed</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"code"</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">""</span><span class="p">)</span></div>
+
+</pre></div>
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../../../../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../../../../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

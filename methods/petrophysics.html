@@ -1,0 +1,961 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Petrophysics and pore-fluid properties &#8212; PyHydroGeophysX Documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=90905a2f556bf617f1a9" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery.css?v=c83e6b79" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-binder.css?v=f4aeca0c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-dataframe.css?v=2082cf3c" />
+    <link rel="stylesheet" type="text/css" href="../_static/sg_gallery-rendered-html.css?v=1277b6f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/usage-stats.css?v=66b2b2d9" />
+    <link rel="stylesheet" type="text/css" href="../_static/site.css?v=245c0fde" />
+  
+  <!-- So that users can add custom icons -->
+  <script defer src="../_static/scripts/fontawesome.js?digest=90905a2f556bf617f1a9"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9" />
+
+    <script src="../_static/documentation_options.js?v=1dd76d02"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/sg-tags.js?v=d80f6fa4"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'methods/petrophysics';</script>
+    <script>DOCUMENTATION_OPTIONS.search_as_you_type = false;</script>
+    <script src="../_static/usage-stats.js?v=84c7f53e"></script>
+    <link rel="canonical" href="https://geohang.github.io/PyHydroGeophysX/methods/petrophysics.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Examples by task" href="../examples/index.html" />
+    <link rel="prev" title="ATS and PFLOTRAN outputs to geophysics" href="../tutorials/ats_pflotran_outputs.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  
+    
+    <script src="../_static/searchtools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script src="../searchindex.js"></script>
+  
+  </head>
+  <body data-default-mode="">
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+  
+  
+  
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header id="pst-header" class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="../_static/logo.png" class="logo__image only-light" alt="PyHydroGeophysX Documentation - Home"/>
+    <img src="../_static/logo.png" class="logo__image only-dark pst-js-only" alt="PyHydroGeophysX Documentation - Home"/>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../agents/index.html">
+    Agentic AI
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API reference
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../citation.html">
+    Citation
+  </a>
+</li>
+
+
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="../changelog.html">
+    Changelog
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../tutorials/index.html">
+    Workflows
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="index.html">
+    Methods
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../agents/index.html">
+    Agentic AI
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api/index.html">
+    API reference
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../data_and_processing.html">
+    Data and processing
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../usage.html">
+    Usage and downloads
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../citation.html">
+    Citation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../changelog.html">
+    Changelog
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/geohang/PyHydroGeophysX" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-github fa-lg" aria-hidden="true"></i><span class="visually-hidden">GitHub</span></a>
+        </li>
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://geohang.github.io/environmental-geophysics/" title="Environmental Geophysics Course" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-solid fa-graduation-cap fa-lg" aria-hidden="true"></i><span class="visually-hidden">Environmental Geophysics Course</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item pst-sidebar-collapse"><button id="pst-collapse-sidebar-button" aria-expanded="true" aria-controls="pst-primary-sidebar">
+  <svg class="pst-icon" role="img" aria-hidden="true" focusable="false" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path fill="currentColor" d="M3 15.5C2.36232 15.5 1.74874 15.2564 1.28478 14.8189C0.820828 14.3815 0.541576 13.7832 0.504167 13.1467L0.5 13L0.5 3C0.499965 2.36232 0.743605 1.74874 1.18107 1.28478C1.61854 0.820828 2.21676 0.541576 2.85333 0.504167L3 0.5L13 0.5C13.6377 0.499965 14.2513 0.743605 14.7152 1.18107C15.1792 1.61854 15.4584 2.21676 15.4958 2.85333L15.5 3L15.5 13C15.5 13.6377 15.2564 14.2513 14.8189 14.7152C14.3815 15.1792 13.7832 15.4584 13.1467 15.4958L13 15.5L3 15.5ZM3 13.8333L10.5 13.8333L10.5 2.16667L3 2.16667C2.79589 2.16669 2.59889 2.24163 2.44636 2.37726C2.29383 2.5129 2.19638 2.69979 2.1725 2.9025L2.16667 3L2.16667 13C2.16669 13.2041 2.24163 13.4011 2.37726 13.5536C2.5129 13.7062 2.69979 13.8036 2.9025 13.8275L3 13.8333ZM6.65583 10.325L6.5775 10.2558L4.91083 8.58917C4.76735 8.44567 4.68116 8.25476 4.66843 8.05223C4.65569 7.84971 4.71729 7.6495 4.84167 7.48917L4.91083 7.41083L6.5775 5.74417C6.72747 5.59471 6.9287 5.50794 7.14032 5.50148C7.35194 5.49502 7.55809 5.56935 7.7169 5.70937C7.8757 5.8494 7.97525 6.04463 7.99533 6.25539C8.01541 6.46616 7.95451 6.67667 7.825 6.84417L7.75583 6.9225L6.67917 8L7.75583 9.0775C7.89931 9.22099 7.98551 9.41191 7.99824 9.61443C8.01097 9.81695 7.94938 10.0172 7.825 10.1775L7.75583 10.2558C7.61234 10.3993 7.42142 10.4855 7.2189 10.4982C7.01638 10.511 6.81617 10.4494 6.65583 10.325Z"/>
+  </svg>
+  <span class="pst-collapse-sidebar-label">Collapse Sidebar</span>
+  <span class="pst-expand-sidebar-label">Expand Sidebar</span>
+</button></div>
+        <div class="sidebar-primary-item">
+
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="ert.html">ERT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="seismic.html">Seismic refraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="em.html">TDEM and FDEM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="potential_fields.html">Gravity and magnetics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mt.html">Magnetotellurics (MT and AMT)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="gpr.html">Ground-penetrating radar (GPR)</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="hydrological_models.html">MODFLOW, ParFlow, ATS and PFLOTRAN</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/ats_pflotran_outputs.html">ATS and PFLOTRAN outputs to geophysics</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Petrophysics and pore-fluid properties</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="index.html" class="nav-link">Methods</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Petrophysics and pore-fluid properties</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="petrophysics-and-pore-fluid-properties">
+<span id="petrophysics-fluid-properties"></span><h1>Petrophysics and pore-fluid properties<a class="headerlink" href="#petrophysics-and-pore-fluid-properties" title="Link to this heading">#</a></h1>
+<section id="capabilities-and-inputs">
+<h2>Capabilities and inputs<a class="headerlink" href="#capabilities-and-inputs" title="Link to this heading">#</a></h2>
+<p>Use these Python helpers to connect pore-fluid chemistry, clay exchange
+capacity and effective grain-contact pressure to electrical resistivity and
+seismic velocity. They require NumPy and SciPy through the package, with no
+optional geophysical engine. Inputs may be scalars or broadcast-compatible
+arrays. These options are available through Python; the desktop controls do
+not yet expose them. For workflows, start with <a class="reference internal" href="../tutorials/index.html"><span class="doc">Workflows</span></a>;
+for signatures, see <a class="reference internal" href="../api/petrophysics.html"><span class="doc">petrophysics package</span></a>.</p>
+<p>The defaults remain unchanged: Hertz-Mindlin coordination number 4, water
+modulus 2.0 GPa, liquid density 1000 kg/m3, and effective pressure estimated
+as <code class="docutils literal notranslate"><span class="pre">(mineral_density</span> <span class="pre">-</span> <span class="pre">1000)</span> <span class="pre">*</span> <span class="pre">9.8</span> <span class="pre">*</span> <span class="pre">depth</span></code> in Pa. A coordination number
+around 9 is a common idealized random-packing choice, not a universal
+recommendation; calibrate it to the material (Mavko et al., 2009, chapter 5).
+Set it through <code class="docutils literal notranslate"><span class="pre">HertzMindlinModel(coordination_number=9)</span></code> when appropriate.</p>
+</section>
+<section id="brine-and-seismic-velocity">
+<h2>Brine and seismic velocity<a class="headerlink" href="#brine-and-seismic-velocity" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">batzle_wang_brine(p,</span> <span class="pre">T,</span> <span class="pre">salinity)</span></code> uses pressure in Pa, temperature in
+degrees Celsius and NaCl mass fraction in kg/kg of solution. It returns an
+object with <code class="docutils literal notranslate"><span class="pre">bulk_modulus</span></code> in GPa and <code class="docutils literal notranslate"><span class="pre">density</span></code> in kg/m3. The implementation
+uses the Batzle-Wang (1992) liquid polynomials with a conservative input
+domain of 0–100 MPa, 0–100 degrees Celsius and 0–0.35 kg/kg. These bounds
+do not check boiling or salt precipitation; ensure a liquid solution exists.</p>
+<p>At 5 MPa and 25 degrees Celsius, fresh water gives 2.25843 GPa and
+998.19925 kg/m3. The latter is the empirical polynomial result, not a
+separate high-accuracy water equation of state. Increasing salinity at
+these conditions raises both density and modulus.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.petrophysics</span><span class="w"> </span><span class="kn">import</span> <span class="n">HertzMindlinModel</span><span class="p">,</span> <span class="n">batzle_wang_brine</span>
+
+<span class="n">brine</span> <span class="o">=</span> <span class="n">batzle_wang_brine</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="mf">5e6</span><span class="p">,</span> <span class="n">T</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span> <span class="n">salinity</span><span class="o">=</span><span class="mf">0.035</span><span class="p">)</span>
+<span class="n">vp_high</span><span class="p">,</span> <span class="n">vp_low</span><span class="p">,</span> <span class="n">elastic</span> <span class="o">=</span> <span class="n">HertzMindlinModel</span><span class="p">()</span><span class="o">.</span><span class="n">calculate_velocity</span><span class="p">(</span>
+    <span class="n">porosity</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">]),</span> <span class="n">saturation</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+    <span class="n">bulk_modulus</span><span class="o">=</span><span class="mf">36.6</span><span class="p">,</span> <span class="n">shear_modulus</span><span class="o">=</span><span class="mf">45.0</span><span class="p">,</span> <span class="n">mineral_density</span><span class="o">=</span><span class="mi">2650</span><span class="p">,</span>
+    <span class="n">effective_pressure</span><span class="o">=</span><span class="mf">2e6</span><span class="p">,</span>
+    <span class="n">fluid_modulus</span><span class="o">=</span><span class="n">brine</span><span class="o">.</span><span class="n">bulk_modulus</span><span class="p">,</span>
+    <span class="n">fluid_density</span><span class="o">=</span><span class="n">brine</span><span class="o">.</span><span class="n">density</span><span class="p">,</span>
+    <span class="n">return_moduli</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Pore-fluid pressure and effective grain-contact pressure are different
+physical inputs; do not equate them automatically. An explicit
+<code class="docutils literal notranslate"><span class="pre">effective_pressure</span></code> overrides depth, including at zero. Changing
+<code class="docutils literal notranslate"><span class="pre">fluid_density</span></code> affects bulk density only, retaining the historical
+pressure estimator unless an effective pressure is supplied.</p>
+<p><code class="docutils literal notranslate"><span class="pre">fluid_modulus</span></code> replaces the liquid modulus in the existing Brie mixture
+(gas modulus 0.01 GPa, exponent 3). An explicit value at or below
+1e-12 GPa instead selects the dry-frame limit at every saturation:
+<code class="docutils literal notranslate"><span class="pre">K_sat</span> <span class="pre">=</span> <span class="pre">K_dry</span></code>. Density still follows the supplied saturation and densities.
+This permits dry-frame diagnostics without silently changing bulk mass.</p>
+<p>With <code class="docutils literal notranslate"><span class="pre">return_moduli=False</span></code>, the return value remains <code class="docutils literal notranslate"><span class="pre">(Vp_high,</span> <span class="pre">Vp_low)</span></code>.
+When True, a third item contains <code class="docutils literal notranslate"><span class="pre">Vs_low</span></code>, <code class="docutils literal notranslate"><span class="pre">Vs_high</span></code>, <code class="docutils literal notranslate"><span class="pre">K_dry_low</span></code>,
+<code class="docutils literal notranslate"><span class="pre">K_dry_high</span></code>, <code class="docutils literal notranslate"><span class="pre">G_dry_low</span></code>, <code class="docutils literal notranslate"><span class="pre">G_dry_high</span></code>, <code class="docutils literal notranslate"><span class="pre">K_sat_low</span></code>, <code class="docutils literal notranslate"><span class="pre">K_sat_high</span></code> and
+<code class="docutils literal notranslate"><span class="pre">density</span></code>. Moduli are GPa, velocities m/s and density kg/m3. The relations
+are <code class="docutils literal notranslate"><span class="pre">Vp**2</span> <span class="pre">=</span> <span class="pre">(K_sat</span> <span class="pre">+</span> <span class="pre">4*G_dry/3)*1e9/density</span></code> and
+<code class="docutils literal notranslate"><span class="pre">Vs**2</span> <span class="pre">=</span> <span class="pre">G_dry*1e9/density</span></code>.</p>
+</section>
+<section id="hertz-mindlin-shear-correction-and-legacy-results">
+<span id="hertz-mindlin-shear-fix"></span><h2>Hertz-Mindlin shear correction and legacy results<a class="headerlink" href="#hertz-mindlin-shear-correction-and-legacy-results" title="Link to this heading">#</a></h2>
+<p>The Hertz-Mindlin contact shear modulus is</p>
+<div class="math notranslate nohighlight">
+\[G_{\mathrm{HM}} =
+\frac{5-4\nu}{5(2-\nu)}
+\left[\frac{3 C^2 (1-\phi_c)^2 G_m^2 P}
+{2\pi^2(1-\nu)^2}\right]^{1/3}.\]</div>
+<p>The prefactor is outside the cube root. Use consistent units for pressure
+and mineral moduli: this implementation converts the Pa input to GPa.
+The formula is verified against the authors’ <a class="reference external" href="https://pangea.stanford.edu/research/srb/books/RPHII/RPHtools/">Rock Physics Handbook
+companion routines</a>
+(<code class="docutils literal notranslate"><span class="pre">hertzmind.m</span></code>, supplied with Mavko, Mukerji and Dvorkin, 2009), and
+<a class="reference external" href="https://rockphypy.readthedocs.io/en/latest/_modules/rockphypy/GM.html#GM.hertzmindlin">rockphypy GM.hertzmindlin</a>
+at <code class="docutils literal notranslate"><span class="pre">f=1</span></code>. rockphypy expects pressure in MPa, so 6.5502 MPa is supplied
+there as 6.5502 and to this API as 6.5502e6.</p>
+<p>Releases before 0.5.0 used <code class="docutils literal notranslate"><span class="pre">10</span> <span class="pre">-</span> <span class="pre">2*nu</span></code> in the denominator and put the class
+method’s prefactor inside the cube root; the standalone <code class="docutils literal notranslate"><span class="pre">vel_porous</span></code> had the
+denominator error only. Results computed with those releases change. No option
+restores the earlier formula. <code class="docutils literal notranslate"><span class="pre">vel_porous</span></code> delegates to
+<code class="docutils literal notranslate"><span class="pre">HertzMindlinModel.calculate_velocity</span></code>, so it stays consistent with the
+two-value and <code class="docutils literal notranslate"><span class="pre">return_moduli=True</span></code> paths.</p>
+<p>A check case: phi=0.2, S=1, Km=40.39369 GPa, Gm=43.10014 GPa,
+mineral density=2657.5 kg/m3, C=9, phi_c=0.4,
+effective pressure=6.5502 MPa, fluid modulus=2.260256 GPa and
+fluid density=998.4548 kg/m3. These are explicit supplied fluid properties,
+not values recomputed by a separate water-property model.</p>
+<div class="pst-scrollable-table-container"><table class="table" id="id2">
+<caption><span class="caption-text">Lower-bound result for this case, before and after 0.5.0</span><a class="headerlink" href="#id2" title="Link to this table">#</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Quantity</p></th>
+<th class="head"><p>Releases before 0.5.0</p></th>
+<th class="head"><p>Current</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Dry bulk modulus (GPa)</p></td>
+<td><p>5.691664</p></td>
+<td><p>4.663967</p></td>
+</tr>
+<tr class="row-odd"><td><p>Dry shear modulus (GPa)</p></td>
+<td><p>7.614628</p></td>
+<td><p>5.103210</p></td>
+</tr>
+<tr class="row-even"><td><p>Saturated bulk modulus (GPa)</p></td>
+<td><p>12.733917</p></td>
+<td><p>12.084909</p></td>
+</tr>
+<tr class="row-odd"><td><p>Vp (m/s)</p></td>
+<td><p>3137.011</p></td>
+<td><p>2849.907</p></td>
+</tr>
+<tr class="row-even"><td><p>Vs (m/s)</p></td>
+<td><p>1809.457</p></td>
+<td><p>1481.309</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Both columns use bulk density 2325.69096 kg/m3. The earlier releases did not
+accept fluid overrides, so their column evaluates the earlier equations for the
+dry moduli and substitutes the supplied fluids.</p>
+<p>Results change even when the default coordination number remains 4.
+For quartz (Km=36.6 GPa, Gm=45 GPa, mineral density=2650 kg/m3) with
+phi=0.2, S=1 and depth=5 m, the class’s lower Vp decreases from
+2109.732 to 2039.173 m/s (3.344%). At phi=0.3, S=0.5 and depth=5 m,
+it decreases from 1038.908 to 939.168 m/s (9.600%). The earlier
+<code class="docutils literal notranslate"><span class="pre">vel_porous</span></code> instead increases slightly for the first case, from 2036.809 to
+2039.173 m/s. Recompute outputs and review calibrations made with the earlier
+equations.</p>
+</section>
+<section id="ionic-conductivity-and-charge">
+<h2>Ionic conductivity and charge<a class="headerlink" href="#ionic-conductivity-and-charge" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">pore_fluid_conductivity</span></code> takes a dictionary of dissolved ion concentrations
+in mol/L, with repeated trailing charge signs, such as <code class="docutils literal notranslate"><span class="pre">Ca++</span></code> and <code class="docutils literal notranslate"><span class="pre">CO3--</span></code>.
+<code class="docutils literal notranslate"><span class="pre">ion_charge</span></code> returns 2 and -2 for these names. Missing or mixed signs are
+rejected; formula digits are not charge numbers (<code class="docutils literal notranslate"><span class="pre">NH4+</span></code> has charge +1).</p>
+<p>The coefficient convention is <strong>equivalent conductivity</strong>, in S m2/eq:</p>
+<div class="math notranslate nohighlight">
+\[\sigma_w = 1000 \sum_i |z_i|\lambda_i c_i.\]</div>
+<p>The following table shows the original values in S cm2/eq; multiply by
+<code class="docutils literal notranslate"><span class="pre">1e-4</span></code> for the optional <code class="docutils literal notranslate"><span class="pre">equivalent_conductivities</span></code> argument. This mapping
+overrides selected defaults and can add ions. Unknown ions without a
+coefficient are rejected. Source: Kanciruk et al. (1986), ORNL/TM-10153,
+Table 8, CONCAL, printed page 30.</p>
+<div class="pst-scrollable-table-container"><table class="table" id="id3">
+<caption><span class="caption-text">Limiting equivalent conductivities at 25 degrees Celsius</span><a class="headerlink" href="#id3" title="Link to this table">#</a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>Ion</p></th>
+<th class="head"><p>S cm2/eq</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>H+</p></td>
+<td><p>349.65</p></td>
+</tr>
+<tr class="row-odd"><td><p>OH-</p></td>
+<td><p>198.0</p></td>
+</tr>
+<tr class="row-even"><td><p>Na+</p></td>
+<td><p>50.08</p></td>
+</tr>
+<tr class="row-odd"><td><p>Cl-</p></td>
+<td><p>76.31</p></td>
+</tr>
+<tr class="row-even"><td><p>Ca++</p></td>
+<td><p>59.47</p></td>
+</tr>
+<tr class="row-odd"><td><p>HCO3-</p></td>
+<td><p>44.5</p></td>
+</tr>
+<tr class="row-even"><td><p>CO3–</p></td>
+<td><p>69.3</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The default table also includes Mg++, K+, NH4+, SO4–, NO3- and F-.
+A molar coefficient already includes the charge contribution: for Ca++
+118.94 S cm2/mol corresponds to 59.47 S cm2/eq. Supplying the former
+as an equivalent coefficient would double-count calcium’s charge.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.petrophysics</span><span class="w"> </span><span class="kn">import</span> <span class="n">pore_fluid_conductivity</span>
+
+<span class="n">sigma_w</span><span class="p">,</span> <span class="n">contributions</span> <span class="o">=</span> <span class="n">pore_fluid_conductivity</span><span class="p">({</span><span class="s2">"Na+"</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span> <span class="s2">"Cl-"</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">})</span>
+<span class="c1"># sigma_w = 0.12639 S/m; contributions sum to sigma_w</span>
+</pre></div>
+</div>
+<p>Use <code class="docutils literal notranslate"><span class="pre">return_contributions=False</span></code> to return only the total. Concentrations
+are dissolved species, not neutral salt totals; no speciation, ion pairing
+or automatic water dissociation is computed.</p>
+</section>
+<section id="optional-concentration-correction">
+<h2>Optional concentration correction<a class="headerlink" href="#optional-concentration-correction" title="Link to this heading">#</a></h2>
+<p>The default is the limiting-ion approximation. It overestimates the
+conductivity of finite-concentration salt solutions. For example,
+0.005 M CaCl2 gives 0.13578 S/m, about 6.2% above the 0.1279 S/m
+conductometry example in Girault (2004).</p>
+<p>An optional calibrated Kohlrausch-type correction uses ionic strength
+<code class="docutils literal notranslate"><span class="pre">I</span> <span class="pre">=</span> <span class="pre">0.5</span> <span class="pre">*</span> <span class="pre">sum(c_i*z_i**2)</span></code> in mol/L and multiplies every contribution
+by <code class="docutils literal notranslate"><span class="pre">1</span> <span class="pre">-</span> <span class="pre">a*sqrt(I)</span></code>. Enable <code class="docutils literal notranslate"><span class="pre">ionic_strength_correction=True</span></code> and provide
+<code class="docutils literal notranslate"><span class="pre">kohlrausch_coefficient=a</span></code> in (mol/L)**(-1/2). There is no universal default
+coefficient. For a fixed electrolyte with <code class="docutils literal notranslate"><span class="pre">I</span> <span class="pre">=</span> <span class="pre">q*c_salt</span></code>, the published
+Kohlrausch form <code class="docutils literal notranslate"><span class="pre">Lambda</span> <span class="pre">=</span> <span class="pre">Lambda0</span> <span class="pre">-</span> <span class="pre">A*sqrt(c_salt)</span></code> corresponds to
+<code class="docutils literal notranslate"><span class="pre">a</span> <span class="pre">=</span> <span class="pre">A/(Lambda0*sqrt(q))</span></code>. See Metrohm’s conductometry monograph, page 14.</p>
+<p>This is a dilute, fixed-composition empirical correction. Calibrate the
+coefficient against data for the intended electrolyte and concentration
+range; it is not a predictive mixed-brine transport model. Corrected
+contributions retain their limiting proportions and sum to the corrected
+total. An absent coefficient or a negative correction factor raises
+<code class="docutils literal notranslate"><span class="pre">ValueError</span></code>.</p>
+</section>
+<section id="cec-surface-conduction-and-clipping">
+<h2>CEC, surface conduction and clipping<a class="headerlink" href="#cec-surface-conduction-and-clipping" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">bulk_cec_to_qv</span></code> converts CEC in eq/m3 <strong>bulk material</strong> to Qv in
+meq/cm3 <strong>pore volume</strong>: <code class="docutils literal notranslate"><span class="pre">Qv</span> <span class="pre">=</span> <span class="pre">CEC/porosity</span> <span class="pre">*</span> <span class="pre">1e-3</span></code>. Thus CEC 10
+and porosity 0.2 give Qv 0.05. Mass-specific CEC in meq/100 g requires
+a separate conversion using the appropriate bulk mass per volume.</p>
+<p><code class="docutils literal notranslate"><span class="pre">waxman_smits_surface_conductivity(sigma_w,</span> <span class="pre">qv)</span></code> implements the specified
+25-degree-Celsius Waxman-Thomas relation:</p>
+<div class="math notranslate nohighlight">
+\[\sigma_s = 4.6 [1 - 0.6\exp(-\sigma_w/1.3)] Q_v.\]</div>
+<p>Here <code class="docutils literal notranslate"><span class="pre">sigma_w</span></code> and <code class="docutils literal notranslate"><span class="pre">sigma_s</span></code> are S/m and Qv is meq/cm3; 1.3 has
+units S/m and 4.6 has units (S/m)/(meq/cm3). Pass the result as
+<code class="docutils literal notranslate"><span class="pre">sigma_s</span></code> to <code class="docutils literal notranslate"><span class="pre">WS_Model</span></code>, which scales both fluid and surface terms
+by the formation factor. Other converters’ <code class="docutils literal notranslate"><span class="pre">sigma_sur</span></code> is outside
+that scaling, so the coefficients are not interchangeable.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">PyHydroGeophysX.petrophysics</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">bulk_cec_to_qv</span><span class="p">,</span> <span class="n">waxman_smits_surface_conductivity</span><span class="p">,</span> <span class="n">WS_Model</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">qv</span> <span class="o">=</span> <span class="n">bulk_cec_to_qv</span><span class="p">(</span><span class="mf">10.0</span><span class="p">,</span> <span class="n">porosity</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
+<span class="n">sigma_s</span> <span class="o">=</span> <span class="n">waxman_smits_surface_conductivity</span><span class="p">(</span><span class="n">sigma_w</span><span class="p">,</span> <span class="n">qv</span><span class="p">)</span>
+<span class="n">resistivity</span> <span class="o">=</span> <span class="n">WS_Model</span><span class="p">(</span>
+    <span class="n">saturation</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span> <span class="n">porosity</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">sigma_w</span><span class="o">=</span><span class="n">sigma_w</span><span class="p">,</span> <span class="n">m</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">sigma_s</span><span class="o">=</span><span class="n">sigma_s</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">WS_Model</span></code> retains saturation clipping to [0.001, 1], a conductivity
+floor of 1e-6 S/m, and resistivity clipping to [0.1, 1e6] ohm-m.
+It emits one <code class="docutils literal notranslate"><span class="pre">RuntimeWarning</span></code> per call when any of these limits activates,
+including the conductivity floor. Normal inputs emit no clipping warning.
+NaN values propagate. These limits are numerical safeguards, not inferred
+physical bounds on your sample.</p>
+</section>
+<section id="water-content-uncertainty">
+<span id="id1"></span><h2>Water-content uncertainty<a class="headerlink" href="#water-content-uncertainty" title="Link to this heading">#</a></h2>
+<p>A water content from resistivity is reported as a mean and a standard
+deviation from a Monte Carlo (<code class="docutils literal notranslate"><span class="pre">petrophysics.monte_carlo.run_petrophysics_monte_carlo</span></code>).
+Each realisation draws the petrophysical parameters of every layer. Given
+<code class="docutils literal notranslate"><span class="pre">log_resistivity_std</span></code>, it also draws the resistivity as
+<span class="math notranslate nohighlight">\(\rho \exp(\sigma \varepsilon)\)</span>, with <span class="math notranslate nohighlight">\(\varepsilon\)</span> standard
+normal, one stream per cell.</p>
+<p>A single-survey ERT run by AQUAH supplies that <span class="math notranslate nohighlight">\(\sigma\)</span>: the
+inversion’s linearised posterior standard deviation of
+<span class="math notranslate nohighlight">\(\ln \rho\)</span> at the final model,</p>
+<div class="math notranslate nohighlight">
+\[C = \left(J^T W_d^2 J + \lambda (W_m^T W_m + \alpha I)\right)^{-1},\]</div>
+<p>from the Jacobian and the inversion’s own data and model weights
+(<code class="docutils literal notranslate"><span class="pre">ERTInversion(posterior_std=True)</span></code>, <code class="docutils literal notranslate"><span class="pre">result.model_log_std</span></code>;
+<a class="reference internal" href="../api/uncertainty.html#PyHydroGeophysX.uncertainty.regularized_posterior_std" title="PyHydroGeophysX.uncertainty.regularized_posterior_std"><code class="xref py py-func docutils literal notranslate"><span class="pre">PyHydroGeophysX.uncertainty.regularized_posterior_std()</span></code></a>; Tarantola,
+2005; Aster et al., 2018). The water content’s standard deviation then carries
+both parts. Time-lapse runs, and meshes above 6000 cells, draw the parameters
+only.</p>
+<p>The linearised part leaves out the smoothing of sharp boundaries, which a
+smoothness prior cannot describe. A layered synthetic with the truth known
+(<code class="docutils literal notranslate"><span class="pre">examples/data/TL_measurements</span></code>, day 330, priors that contain the true
+parameters) gave these shares of cells holding the truth:</p>
+<ul class="simple">
+<li><p>parameters alone: 65 % within one standard deviation, 94 % within two;</p></li>
+<li><p>with the inversion’s part drawn as well: 72 % and 97 %;</p></li>
+<li><p>below 3 m, still under 70 % within one.</p></li>
+</ul>
+<p>With generic default parameters, the parameter spread is wide enough to hide
+both effects, and the mean was biased low by about 0.07. The reports say which
+case a run is. <a class="reference internal" href="../api/uncertainty.html#PyHydroGeophysX.uncertainty.interval_coverage" title="PyHydroGeophysX.uncertainty.interval_coverage"><code class="xref py py-func docutils literal notranslate"><span class="pre">PyHydroGeophysX.uncertainty.interval_coverage()</span></code></a> repeats
+this check wherever the truth is known: synthetics, cores, logs.</p>
+</section>
+<section id="references">
+<h2>References<a class="headerlink" href="#references" title="Link to this heading">#</a></h2>
+<p>Full BibTeX records are in <a class="reference internal" href="../citation.html"><span class="doc">Citation</span></a>. Relevant sources are Batzle
+and Wang (1992), Waxman and Thomas (1974), Kanciruk et al. (1986),
+Metrohm’s <em>Conductometry - Conductivity Measurement</em>, Girault (2004),
+and Mavko, Mukerji and Dvorkin (2009). The linearised posterior follows
+Tarantola, A. (2005), <em>Inverse Problem Theory and Methods for Model Parameter
+Estimation</em>, SIAM, and Aster, R. C., Borchers, B. and Thurber, C. H. (2018),
+<em>Parameter Estimation and Inverse Problems</em>, 3rd ed., Elsevier.</p>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="../tutorials/ats_pflotran_outputs.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">ATS and PFLOTRAN outputs to geophysics</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="../examples/index.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Examples by task</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#capabilities-and-inputs">Capabilities and inputs</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#brine-and-seismic-velocity">Brine and seismic velocity</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#hertz-mindlin-shear-correction-and-legacy-results">Hertz-Mindlin shear correction and legacy results</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ionic-conductivity-and-charge">Ionic conductivity and charge</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#optional-concentration-correction">Optional concentration correction</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cec-surface-conduction-and-clipping">CEC, surface conduction and clipping</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#water-content-uncertainty">Water-content uncertainty</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#references">References</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/geohang/PyHydroGeophysX/edit/main/docs/source/methods/petrophysics.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+  <div class="sidebar-secondary-item">
+
+  <div class="tocsection sourcelink">
+    <a href="../_sources/methods/petrophysics.rst.txt">
+      <i class="fa-solid fa-file-lines"></i> Show Source
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=90905a2f556bf617f1a9"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=90905a2f556bf617f1a9"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hang Chen.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 9.0.4.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.20.0.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

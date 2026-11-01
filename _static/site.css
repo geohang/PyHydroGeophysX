@@ -1,0 +1,351 @@
+/* PyHydroGeophysX site styling.
+ *
+ * Two brand colours only: a water blue taken from the logo, used for links,
+ * buttons and active navigation, and an earth tone, reserved for the one
+ * relationship the homepage diagram exists to show. Individual geophysical
+ * methods deliberately share the theme's neutral colours, so the site does not
+ * read as a catalogue of features.
+ */
+
+/* The accent carries text: links, the eyebrow, card footers and the active
+   navigation item, so it has to stay readable on white (4.97:1 here).
+   A filled button has the opposite problem - a large block of that same colour
+   reads as heavy - so it gets a brighter fill and dark text instead, which is
+   lighter on the page and still 4.95:1. */
+:root {
+  --phgx-accent: #12799a;
+  --phgx-accent-strong: #0e6480;
+  --phgx-accent-wash: rgba(18, 121, 154, 0.08);
+  --phgx-btn-bg: #22a2c4;
+  --phgx-btn-bg-hover: #2aa9cb;
+  --phgx-btn-text: #052c36;
+  --phgx-earth: #8a5a24;
+  --phgx-border: rgba(16, 24, 32, 0.15);
+  --phgx-plate: #ffffff;
+}
+
+html[data-theme="dark"] {
+  --phgx-accent: #7fd0e6;
+  --phgx-accent-strong: #a6e0f0;
+  --phgx-accent-wash: rgba(127, 208, 230, 0.12);
+  --phgx-btn-bg: #7fd0e6;
+  --phgx-btn-bg-hover: #a6e0f0;
+  --phgx-btn-text: #0b1116;
+  --phgx-earth: #e0ae74;
+  --phgx-border: rgba(255, 255, 255, 0.18);
+  --phgx-plate: #f4f5f7;
+}
+
+/* Give sphinx-design's filled buttons the same treatment, so every primary
+   button on the site matches. The theme sets these under html[data-theme=...],
+   so the override has to be scoped the same way to win; site.css loads after
+   the theme, which settles the tie. Link and navigation colours are left to
+   the theme, which already ships an accessible pair. */
+html[data-theme="light"],
+html[data-theme="dark"] {
+  --sd-color-primary: var(--phgx-btn-bg);
+  --sd-color-primary-highlight: var(--phgx-btn-bg-hover);
+  --sd-color-primary-text: var(--phgx-btn-text);
+}
+
+/* ------------------------------------------------------------------ layout */
+
+/* Long text reads better narrow than the theme's 60em default. The homepage
+   and the usage dashboard opt back out, because cards and a world map need the
+   width. The selector repeats the theme's own ancestors because that is what
+   its 60em rule is written with; :has() is unsupported on old browsers, which
+   simply keeps 54em everywhere. */
+.bd-main .bd-content .bd-article-container {
+  max-width: 54em;
+}
+
+.bd-main .bd-content .bd-article-container:has(.phgx-hero),
+.bd-main .bd-content .bd-article-container:has(#phgx-stats) {
+  max-width: 76rem;
+}
+
+/* ------------------------------------------------------------------- video */
+
+/* Keep the installation video responsive without reserving a fixed desktop width. */
+.setup-video { position: relative; aspect-ratio: 16 / 9; width: 100%; margin: 1rem 0; }
+.setup-video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; border-radius: 8px; }
+
+/* -------------------------------------------------------------------- hero */
+
+.phgx-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 3.5rem;
+  align-items: center;
+  padding: 1rem 0 0.5rem;
+}
+
+.phgx-hero__eyebrow {
+  margin: 0 0 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--phgx-accent);
+}
+
+.phgx-hero__title {
+  margin: 0 0 0.75rem;
+  font-size: clamp(2.1rem, 4.4vw, 3rem);
+  line-height: 1.08;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.phgx-hero__lead {
+  margin: 0 0 0.9rem;
+  font-size: clamp(1.1rem, 1.8vw, 1.32rem);
+  line-height: 1.38;
+  font-weight: 500;
+}
+
+.phgx-hero__body {
+  margin: 0 0 1.6rem;
+  max-width: 34em;
+  color: var(--pst-color-text-muted);
+}
+
+.phgx-hero__actions,
+.phgx-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0 0 1rem;
+}
+
+.phgx-actions {
+  margin: 1.5rem 0 1.25rem;
+}
+
+.phgx-hero__more {
+  margin: 0;
+  font-weight: 600;
+}
+
+.phgx-btn {
+  display: inline-block;
+  padding: 0.68rem 1.3rem;
+  border: 1px solid var(--phgx-border);
+  border-radius: 8px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none !important;
+  color: var(--pst-color-text-base);
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.phgx-btn:hover {
+  border-color: var(--phgx-accent);
+  color: var(--phgx-accent);
+  background: var(--phgx-accent-wash);
+}
+
+.phgx-btn--primary,
+.phgx-btn--primary:hover {
+  background: var(--phgx-btn-bg);
+  border-color: var(--phgx-btn-bg);
+  color: var(--phgx-btn-text);
+}
+
+/* Hover brightens rather than darkens, so the label keeps its contrast. */
+.phgx-btn--primary:hover {
+  background: var(--phgx-btn-bg-hover);
+  border-color: var(--phgx-btn-bg-hover);
+}
+
+/* --------------------------------------------------------- hero flow chart */
+
+/* The diagram inherits the page text colour, so one drawing serves both
+   themes. Only the compare link departs from it. */
+.phgx-flow {
+  display: block;
+  width: 100%;
+  max-width: 470px;
+  height: auto;
+  margin: 0 auto;
+}
+
+.phgx-flow__box rect {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  opacity: 0.32;
+}
+
+.phgx-flow__link path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  opacity: 0.55;
+}
+
+.phgx-flow__label text {
+  fill: currentColor;
+  font-size: 13px;
+}
+
+.phgx-flow__sub text {
+  fill: currentColor;
+  font-size: 11.5px;
+  opacity: 0.72;
+}
+
+/* The one relationship the diagram exists to show: a prediction and a
+   measurement of the same thing, held against each other. It is the only part
+   of the drawing that leaves the neutral palette. */
+.phgx-flow__compare {
+  color: var(--phgx-earth);
+}
+
+.phgx-flow__compare-head {
+  fill: var(--phgx-earth);
+}
+
+.phgx-flow__note {
+  font-size: 11.5px;
+  font-weight: 600;
+  fill: currentColor;
+}
+
+/* ---------------------------------------------------------------- sections */
+
+/* Give the homepage blocks enough air to read as a page rather than as one
+   long document. Scoped to the homepage through the hero. */
+.phgx-hero ~ section {
+  margin-top: 4.5rem;
+}
+
+.phgx-hero ~ section > h2 {
+  margin-top: 0;
+  margin-bottom: 0.4rem;
+  font-size: 1.6rem;
+  letter-spacing: -0.01em;
+}
+
+/* ------------------------------------------------------------------- cards */
+
+.sd-card {
+  border-radius: 11px;
+  border: 1px solid var(--phgx-border);
+  box-shadow: none;
+  transition: border-color 0.15s ease;
+}
+
+.phgx-cards .sd-card:hover {
+  border-color: var(--phgx-accent);
+}
+
+.phgx-cards .sd-card-title {
+  font-size: 1.04rem;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.phgx-cards .sd-card-body {
+  padding: 1.15rem 1.25rem;
+}
+
+.phgx-cards .sd-card-footer {
+  border-top: 1px solid var(--phgx-border);
+  padding: 0.7rem 1.25rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--phgx-accent);
+}
+
+.phgx-cards .sd-card-footer p::after {
+  content: " \2192";
+}
+
+/* One shared aspect ratio, so cards line up. The figures are contained rather
+   than cropped: a scientific figure with its axes cut off is worse than a
+   little empty space. */
+.phgx-cards .sd-card-img-top {
+  /* 5:2 rather than 16:9, because these sections are panoramic: every figure
+     used here is wider than 16:9, so a taller box would only add empty space. */
+  aspect-ratio: 5 / 2;
+  width: 100%;
+  object-fit: contain;
+  background: var(--phgx-plate);
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--phgx-border);
+  border-radius: 11px 11px 0 0;
+}
+
+/* -------------------------------------------------------------------- tags */
+
+.phgx-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.9rem 0 1.1rem;
+}
+
+.phgx-tag {
+  display: inline-block;
+  padding: 0.36rem 0.9rem;
+  border: 1px solid var(--phgx-border);
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-decoration: none !important;
+  color: var(--pst-color-text-base);
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.phgx-tag:hover {
+  border-color: var(--phgx-accent);
+  background: var(--phgx-accent-wash);
+  color: var(--phgx-accent);
+}
+
+/* MODFLOW and ParFlow are the hydrological end of the same list, so they carry
+   the earth tone rather than the water blue. This is a distinction between two
+   kinds of thing, not per-method decoration. */
+.phgx-tag--hydro:hover {
+  border-color: var(--phgx-earth);
+  background: transparent;
+  color: var(--phgx-earth);
+}
+
+/* ------------------------------------------------------------------- demos */
+
+.phgx-demos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin: 1.5rem 0 0;
+}
+
+.phgx-demo {
+  margin: 0;
+}
+
+.phgx-demo .setup-video {
+  margin: 0;
+}
+
+.phgx-demo figcaption {
+  margin-top: 0.7rem;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--pst-color-text-muted);
+}
+
+/* ------------------------------------------------------------------ narrow */
+
+@media (max-width: 900px) {
+  .phgx-hero {
+    grid-template-columns: 1fr;
+    gap: 2.25rem;
+  }
+
+  .phgx-hero ~ section {
+    margin-top: 3.25rem;
+  }
+}
